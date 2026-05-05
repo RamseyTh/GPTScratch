@@ -4,7 +4,7 @@
 This project compares the assignment GPT model with a retrieval-augmented version of the same model on Form 10-K financial question answering.
 
 ## Hypothesis
-Adding retrieved 10-K passages to the GPT prompt should improve factual grounding and reduce gold-answer perplexity compared with the baseline GPT that sees only the question. The tradeoff is additional retrieval overhead and longer prompts.
+Adding retrieved 10-K passages to the GPT prompt should improve factual grounding and reduce gold-answer perplexity compared with the baseline GPT that sees only the question. 
 
 ## Model and Tokenizer
 - GPT implementation: `src/gpt.py`
@@ -23,16 +23,16 @@ Adding retrieved 10-K passages to the GPT prompt should improve factual groundin
 - raw filings: `data/raw/`
 - verified questions: `data/questions/questions_verified.jsonl`
 - remapped verified questions: `data/questions/questions_verified.remapped.jsonl`
-- optional cleaned research questions: `data/questions/questions_research.validated.jsonl`
+- optional cleaned questions: `data/questions/questions_research.validated.jsonl`
 - chunks: `outputs/chunks/chunks.jsonl`
 
 ## Quick Run
 ```bash
-python main.py --quick-run --run-id final_verified_run --report
+python main.py --quick-run --run-id final_run --report
 ```
 
 This uses:
-- the best available research or verified question file
+- the best available verified question file
 - `outputs/chunks/chunks.jsonl`
 - `model/model_weights.pt`
 - `model/hftokenizer`
@@ -42,8 +42,6 @@ This uses:
 ```bash
 python main.py --quick-run --limit 3 --run-id smoke_test --report
 ```
-
-Any run using `--limit` is a smoke test and should not be used for final conclusions.
 
 ## Installing Verified Questions
 ```bash
@@ -69,7 +67,7 @@ python scripts/validate_verified_questions.py \
   --out data/questions/questions_verified.remapped.jsonl
 ```
 
-## Optional: Clean Research Questions
+## Optional: Clean Questions
 ```bash
 python scripts/clean_verified_questions.py \
   --questions data/questions/questions_verified.remapped.jsonl \
