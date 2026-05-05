@@ -1,0 +1,50 @@
+category,value,count
+total,all,5130
+chunk_config,table_aware_clean_context,5130
+company,Amazon,499
+company,Apple,666
+company,Google,755
+company,Meta,840
+company,Microsoft,641
+company,NVIDIA,914
+company,Tesla,815
+section,Front Matter,137
+section,Item 1,324
+section,Item 10,34
+section,Item 11,16
+section,Item 12,16
+section,Item 13,16
+section,Item 14,19
+section,Item 15,756
+section,Item 16,475
+section,Item 1A,853
+section,Item 1B,15
+section,Item 1C,51
+section,Item 2,28
+section,Item 3,104
+section,Item 4,45
+section,Item 5,57
+section,Item 6,18
+section,Item 7,528
+section,Item 7A,69
+section,Item 8,1394
+section,Item 9,15
+section,Item 9A,70
+section,Item 9B,69
+section,Item 9C,21
+source_type,local_context,15
+source_type,narrative,3432
+source_type,table_row,1544
+source_type,table_summary,139
+non_retrievable_reason,cover_page,135
+non_retrievable_reason,exhibit_list,6
+non_retrievable_reason,forward_looking_boilerplate,17
+non_retrievable_reason,header_footer,101
+non_retrievable_reason,navigation_only,965
+non_retrievable_reason,signatures,2
+non_retrievable_reason,table_of_contents,518
+non_retrievable_reason,too_short,96
+non_retrievable_reason,unknown,3290
+retrievable,False,1840
+retrievable,True,3290
+average_token_count,all,112.64

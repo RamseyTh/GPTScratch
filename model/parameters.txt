@@ -1,0 +1,26 @@
+MODEL
+d_model       = 256
+n_heads       = 8
+layers        = 4
+vocab_size    = 10000
+max_seq_len   = 256
+parameters    = ~21M
+
+TRAINING
+batch_size    = 8
+sequence_len  = 256
+dataset       = 1/20 random subset of data.txt
+total_steps   = num_sequences // batch_size
+
+OPTIMIZER
+type          = AdamW
+peak_lr       = 5e-4
+beta1         = 0.9
+beta2         = 0.95
+epsilon       = 1e-8
+weight_decay  = none
+grad_clip     = 1.0
+
+LR SCHEDULE
+type          = cosine decay + linear warmup
+warmup_steps  = 15

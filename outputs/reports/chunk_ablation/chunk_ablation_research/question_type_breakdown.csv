@@ -1,0 +1,17 @@
+chunk_config,question_type,num_questions,token_f1,numeric_accuracy,answer_coverage_at_3,gold_answer_perplexity
+fixed_128,explanation,104,0.0,0.0,0.5673076923076923,2289.8141693410894
+fixed_128,text_fact,4,0.0,,0.5,5931.778853895028
+fixed_256,explanation,104,0.0,0.0,0.4423076923076923,2309.464248587109
+fixed_256,text_fact,4,0.0,,0.5,5487.037614765852
+fixed_512,explanation,104,0.0002345215759849906,0.0,0.23076923076923078,2312.2677992331446
+fixed_512,text_fact,4,0.0,,0.0,5307.010962777776
+section_180,explanation,104,0.0,0.0,0.23076923076923078,2241.945821222256
+section_180,text_fact,4,0.0,,0.5,5874.6502230669985
+table_aware_clean,explanation,104,0.0,0.0,0.41346153846153844,2413.929258561354
+table_aware_clean,text_fact,4,0.0,,0.0,6298.550944922215
+table_aware_clean_context,explanation,104,0.0,0.0,0.41346153846153844,2413.929258561354
+table_aware_clean_context,text_fact,4,0.0,,0.0,6298.550944922215
+table_aware_mixed,explanation,104,0.0,0.0,0.41346153846153844,2413.929258561354
+table_aware_mixed,text_fact,4,0.0,,0.0,6298.550944922215
+table_row_only,explanation,104,0.0,0.0,0.0,2402.647348608528
+table_row_only,text_fact,4,0.0,,0.0,6168.699077937349

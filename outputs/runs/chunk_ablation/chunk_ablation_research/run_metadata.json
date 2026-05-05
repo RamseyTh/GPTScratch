@@ -1,0 +1,84 @@
+{
+  "experiment": "chunk_ablation",
+  "run_id": "chunk_ablation_research",
+  "chunk_configs": [
+    "fixed_128",
+    "fixed_256",
+    "fixed_512",
+    "section_180",
+    "table_row_only",
+    "table_aware_mixed",
+    "table_aware_clean",
+    "table_aware_clean_context"
+  ],
+  "question_file": "data/questions/questions_research.validated.jsonl",
+  "checkpoint": "model/model_weights.pt",
+  "tokenizer_dir": "model/hftokenizer",
+  "retriever": "tfidf",
+  "top_k": 3,
+  "context_token_budget": 700,
+  "systems": [
+    "baseline_gpt",
+    "rag_gpt_tfidf_top3",
+    "oracle_gpt",
+    "random_context_gpt"
+  ],
+  "config_results": [
+    {
+      "chunk_config": "fixed_128",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/fixed_128",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/fixed_128",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "fixed_256",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/fixed_256",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/fixed_256",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "fixed_512",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/fixed_512",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/fixed_512",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "section_180",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/section_180",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/section_180",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "table_row_only",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/table_row_only",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/table_row_only",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "table_aware_mixed",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/table_aware_mixed",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/table_aware_mixed",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "table_aware_clean",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/table_aware_clean",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/table_aware_clean",
+      "report_path": null,
+      "num_predictions": 432
+    },
+    {
+      "chunk_config": "table_aware_clean_context",
+      "run_dir": "outputs/runs/chunk_ablation/chunk_ablation_research/table_aware_clean_context",
+      "report_dir": "outputs/reports/chunk_ablation/chunk_ablation_research/table_aware_clean_context",
+      "report_path": null,
+      "num_predictions": 432
+    }
+  ]
+}
