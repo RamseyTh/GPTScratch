@@ -115,6 +115,7 @@ class Retriever:
     def _result(self, rank: int, idx: int, score: float) -> dict:
         chunk = self.chunks[idx]
         metadata_keys = (
+            "chunk_config",
             "source_file",
             "ticker",
             "company",
@@ -126,7 +127,9 @@ class Retriever:
             "table_title",
             "row_label",
             "chunk_index",
+            "token_count",
             "retrievable",
+            "non_retrievable_reason",
         )
         metadata = {key: chunk.get(key, "") for key in metadata_keys}
         return {
@@ -205,31 +208,78 @@ def retrieval_context(results: list[dict], max_chars: int | None = None, token_b
     return "\n\n".join(pieces)
 
 
-def retrieval_diagnostic(question: dict, query: str, filters: dict, results: list[dict], latency: float) -> dict:
+def retrieval_diagnostic(
+    question: dict,
+    query: str,
+    filters: dict,
+    results: list[dict],
+    latency: float,
+    chunk_config: str | None = None,
+) -> dict:
     coverage_at_1 = answer_coverage_for_results(results, question, k=1)
     coverage = answer_coverage_for_results(results, question, k=3)
+    coverage_at_5 = answer_coverage_for_results(results, question, k=5)
     source_ok = source_accuracy_for_results(results, question, k=3)
+    matched = _matched_chunk_id(results, question, k=5)
+    sections = [row.get("metadata", {}).get("section_id") for row in results]
+    source_types = [row.get("metadata", {}).get("source_type") for row in results]
     return {
         "question_id": question.get("question_id", ""),
+        "chunk_config": chunk_config or _first_metadata(results, "chunk_config"),
+        "question_type": question.get("question_type", ""),
+        "ticker": question.get("ticker", ""),
+        "year": question.get("year", ""),
         "query": query,
         "filters": filters,
         "retrieved_chunk_ids": [row.get("chunk_id") for row in results],
         "retrieved_scores": [row.get("score") for row in results],
-        "retrieved_sections": [row.get("metadata", {}).get("section_id") for row in results],
-        "retrieved_source_types": [row.get("metadata", {}).get("source_type") for row in results],
+        "retrieved_sections": sections,
+        "retrieved_source_types": source_types,
+        "retrieved_token_counts": [row.get("metadata", {}).get("token_count") for row in results],
         "answer_coverage_at_1": coverage_at_1,
         "answer_coverage_at_3": coverage,
+        "answer_coverage_at_5": coverage_at_5,
         "source_accuracy": source_ok,
         "source_accuracy_at_3": source_ok,
+        "section_accuracy_at_3": section_accuracy_for_results(results, question, k=3),
         "table_row_recall_at_3": table_row_recall_for_results(results, question, k=3),
         "retrieval_latency_seconds": latency,
         "noise_reason": retrieval_noise_reason(question, results, coverage, source_ok),
+        "gold_evidence_text": question.get("gold_evidence_text", ""),
+        "gold_chunk_id": question.get("gold_chunk_id", ""),
+        "matched_retrieved_chunk_id": matched,
     }
+
+
+def section_accuracy_for_results(results: list[dict], question: dict, k: int = 3) -> bool | None:
+    expected = str(question.get("source_section") or "").strip()
+    if not expected:
+        return None
+    return any(str(result.get("metadata", {}).get("section_id") or "") == expected for result in results[:k])
+
+
+def _matched_chunk_id(results: list[dict], question: dict, k: int = 5) -> str:
+    from .evaluation import answer_coverage
+
+    for result in results[:k]:
+        if answer_coverage(str(result.get("text", "")), question):
+            return str(result.get("chunk_id") or "")
+    return ""
+
+
+def _first_metadata(results: list[dict], key: str) -> str:
+    for result in results:
+        value = result.get("metadata", {}).get(key)
+        if value:
+            return str(value)
+    return ""
 
 
 def retrieval_noise_reason(question: dict, results: list[dict], coverage: bool, source_ok: bool | None) -> str:
     if coverage and (source_ok is not False):
         return "none"
+    if not results and not coverage:
+        return "retrieval_miss"
     if any("forward-looking" in str(result.get("text", "")).lower() for result in results):
         return "boilerplate"
     if source_ok is False:

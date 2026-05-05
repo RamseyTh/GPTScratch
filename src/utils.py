@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import random
 import re
+import csv
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -47,6 +48,22 @@ def write_json(path: str | Path, data: Any) -> None:
     ensure_dir(path.parent)
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def write_csv(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
+    """Write a list of dictionaries as CSV with a stable union of columns."""
+    path = Path(path)
+    ensure_dir(path.parent)
+    rows = list(rows)
+    fieldnames: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in fieldnames:
+                fieldnames.append(key)
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def read_json(path: str | Path, default: Any | None = None) -> Any:
@@ -106,21 +123,38 @@ def resolve_question_file(explicit_path: str | Path | None = None) -> tuple[Path
     """
     if explicit_path:
         path = Path(explicit_path)
+        if path.exists():
+            return path, question_source_for_path(path, explicit=True)
+        if path.name in {"questions_research.validated.jsonl", "questions_research.jsonl"}:
+            for fallback, source in _default_question_candidates():
+                if fallback.exists():
+                    print(
+                        f"WARNING: Requested question file {path} was not found. "
+                        f"Using {fallback} as a diagnostic fallback."
+                    )
+                    return fallback, source
         return path, question_source_for_path(path, explicit=True)
-    candidates = [
-        (Path("data/questions/questions_verified.remapped.jsonl"), "verified_remapped"),
-        (Path("data/questions/questions_verified.jsonl"), "verified"),
-        (Path("data/questions/questions.jsonl"), "default"),
-        (Path("data/questions/sample_questions.jsonl"), "sample"),
-    ]
-    for path, source in candidates:
+    for path, source in _default_question_candidates():
         if path.exists():
             return path, source
     return Path("data/questions/sample_questions.jsonl"), "sample"
 
 
+def _default_question_candidates() -> list[tuple[Path, str]]:
+    return [
+        (Path("data/questions/questions_verified.remapped.jsonl"), "verified_remapped"),
+        (Path("data/questions/questions_verified.jsonl"), "verified"),
+        (Path("data/questions/questions.jsonl"), "default"),
+        (Path("data/questions/sample_questions.jsonl"), "sample"),
+    ]
+
+
 def question_source_for_path(path: str | Path, explicit: bool = False) -> str:
     name = Path(path).name
+    if name == "questions_research.validated.jsonl":
+        return "research_validated"
+    if name == "questions_research.jsonl":
+        return "research"
     if name == "questions_verified.remapped.jsonl":
         return "verified_remapped"
     if name == "questions_verified.jsonl":

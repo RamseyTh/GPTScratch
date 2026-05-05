@@ -7,6 +7,7 @@
   "tokenizer_dir": "model/hftokenizer",
   "run_id": "final_verified_run",
   "report": true,
+  "report_only": false,
   "limit": null,
   "d_model": null,
   "n_heads": null,
@@ -33,6 +34,8 @@
   "allow_small_research_report": false,
   "strict_research_report": false,
   "ablation": false,
+  "experiment": "standard",
+  "chunk_configs": "table_aware_mixed",
   "open_corpus": false,
   "context_token_budget": 700,
   "numeric_extraction": true,
@@ -131,10 +134,40 @@
       "narrative": 2457,
       "local_context": 15
     },
+    "by_section": {
+      "Front Matter": 124,
+      "Item 1": 249,
+      "Item 1A": 600,
+      "Item 1B": 15,
+      "Item 1C": 38,
+      "Item 2": 27,
+      "Item 3": 84,
+      "Item 4": 42,
+      "Item 5": 51,
+      "Item 6": 18,
+      "Item 7": 429,
+      "Item 7A": 61,
+      "Item 8": 1118,
+      "Item 9": 15,
+      "Item 9A": 57,
+      "Item 9B": 66,
+      "Item 9C": 20,
+      "Item 10": 29,
+      "Item 11": 16,
+      "Item 12": 16,
+      "Item 13": 16,
+      "Item 14": 19,
+      "Item 15": 671,
+      "Item 16": 374
+    },
+    "by_chunk_config": {
+      "table_aware_mixed": 4155
+    },
     "retrievable_count": 2358,
     "non_retrievable_count": 1797,
     "table_row_count": 1544,
-    "table_summary_count": 139
+    "table_summary_count": 139,
+    "local_context_count": 15
   },
   "oracle_sanity": null
 }

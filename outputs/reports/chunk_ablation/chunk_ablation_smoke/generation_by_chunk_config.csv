@@ -1,0 +1,9 @@
+system,num_questions,exact_match,token_f1,numeric_accuracy,numeric_generation_accuracy,numeric_extraction_accuracy,refusal_accuracy,hallucination_rate,average_generation_latency,average_retrieval_latency,average_total_latency,average_prompt_tokens,average_completion_tokens,average_gold_answer_loss,average_gold_answer_perplexity,answer_coverage_at_1,answer_coverage_at_3,answer_coverage_at_5,source_accuracy,source_accuracy_at_3,section_accuracy_at_3,table_row_recall_at_3,perplexity_delta_vs_baseline,chunk_config
+baseline_gpt,1,0.0,0.0,,,,,,0.1112541686743497,0.0,0.2004482112824916,29.0,1.0,8.227022171020508,3740.678050945507,,,,0.0,0.0,0.0,,0.0,fixed_128
+oracle_gpt,1,0.0,0.0,,,,,,0.033541539683938,0.0,0.0652405843138694,66.0,1.0,8.23843002319336,3783.5954856167887,1.0,1.0,1.0,0.0,0.0,0.0,,42.917434671281626,fixed_128
+rag_gpt_tfidf_top3,1,0.0,0.0,,,,,,0.2624957077205181,0.0205982085317373,0.690505750477314,256.0,1.0,8.369815826416016,4314.841309725075,0.0,1.0,1.0,1.0,1.0,0.0,,574.163258779568,fixed_128
+random_context_gpt,1,0.0,0.0,,,,,,0.0959964990615844,0.0,0.2074157930910587,256.0,1.0,8.25394344329834,3842.749647209813,0.0,0.0,0.0,0.0,0.0,0.0,,102.07159626430575,fixed_128
+baseline_gpt,1,0.0,0.0,,,,,,0.0106211230158805,0.0,0.0277703367173671,29.0,1.0,8.227022171020508,3740.678050945507,,,,0.0,0.0,0.0,,0.0,table_aware_clean
+oracle_gpt,1,0.0,0.0,,,,,,0.0097170416265726,0.0,0.0286400411278009,66.0,1.0,8.23843002319336,3783.5954856167887,1.0,1.0,1.0,0.0,0.0,0.0,,42.917434671281626,table_aware_clean
+rag_gpt_tfidf_top3,1,0.0,0.0,,,,,,0.0440849997103214,0.0062105413526296,0.109136875718832,256.0,1.0,8.456790924072266,4706.928843270829,0.0,0.0,0.0,1.0,1.0,0.0,,966.250792325322,table_aware_clean
+random_context_gpt,1,0.0,0.0,,,,,,0.0486047491431236,0.0,0.1169405411928892,256.0,1.0,8.469717025756836,4768.1660104015245,0.0,0.0,0.0,0.0,0.0,0.0,,1027.4879594560175,table_aware_clean

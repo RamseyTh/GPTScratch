@@ -1,3 +1,10 @@
+"""Build retrieval chunks from Form 10-K filing text.
+
+The default project corpus uses section-aware narrative chunks plus
+natural-language table rows.  The chunking ablation reuses the same helpers
+with named configurations so only the retrieval units change across runs.
+"""
+
 from __future__ import annotations
 
 import csv
@@ -24,8 +31,62 @@ BOILERPLATE_PATTERNS = (
     "exhibits",
 )
 
+CHUNK_CONFIGS = {
+    "fixed_128": {"kind": "fixed", "chunk_size": 128, "overlap": 32},
+    "fixed_256": {"kind": "fixed", "chunk_size": 256, "overlap": 64},
+    "fixed_512": {"kind": "fixed", "chunk_size": 512, "overlap": 128},
+    "section_180": {"kind": "section", "chunk_size": 180, "overlap": 40},
+    "table_row_only": {"kind": "table_row_only", "chunk_size": 180, "overlap": 40},
+    "table_aware_mixed": {"kind": "table_aware_mixed", "chunk_size": 180, "overlap": 40},
+    "table_aware_clean": {"kind": "table_aware_clean", "chunk_size": 180, "overlap": 40},
+    "table_aware_clean_context": {"kind": "table_aware_clean_context", "chunk_size": 180, "overlap": 40},
+}
+DEFAULT_CHUNK_CONFIG = "table_aware_mixed"
+TARGET_SECTION_IDS = {"Item 1", "Item 1A", "Item 7", "Item 8"}
+
+
+def parse_chunk_configs(value: str | list[str] | tuple[str, ...] | None) -> list[str]:
+    """Parse and validate a comma-separated chunk config list."""
+    if value is None:
+        return [DEFAULT_CHUNK_CONFIG]
+    configs = value if isinstance(value, (list, tuple)) else [item.strip() for item in str(value).split(",")]
+    out = [config for config in configs if config]
+    unknown = [config for config in out if config not in CHUNK_CONFIGS]
+    if unknown:
+        raise ValueError(f"Unsupported chunk config(s): {', '.join(unknown)}. Supported configs: {', '.join(CHUNK_CONFIGS)}")
+    return out or [DEFAULT_CHUNK_CONFIG]
+
+
+def chunk_documents_for_config(
+    documents: list[dict],
+    chunk_config: str = DEFAULT_CHUNK_CONFIG,
+    chunk_size: int | None = None,
+    overlap: int | None = None,
+) -> list[dict]:
+    """Build chunks for one named ablation configuration."""
+    if chunk_config not in CHUNK_CONFIGS:
+        raise ValueError(f"Unsupported chunk config: {chunk_config}")
+    spec = CHUNK_CONFIGS[chunk_config]
+    size = int(chunk_size or spec["chunk_size"])
+    ov = int(overlap if overlap is not None else spec["overlap"])
+    chunks: list[dict] = []
+    for document in documents:
+        if spec["kind"] == "fixed":
+            chunks.extend(_fixed_chunks(document, chunk_config, size, ov))
+        elif spec["kind"] == "section":
+            chunks.extend(_section_narrative_chunks(document, chunk_config, size, ov))
+        else:
+            mixed = chunk_document(document, chunk_size=size, overlap=ov)
+            if spec["kind"] == "table_row_only":
+                mixed = [chunk for chunk in mixed if chunk.get("source_type") in {"table_row", "table_summary"}]
+            elif spec["kind"] == "table_aware_clean_context":
+                mixed = _add_local_context_chunks_if_needed(document, mixed, size, ov)
+            chunks.extend(mixed)
+    return _finalize_chunk_config(chunks, chunk_config, aggressive_clean=chunk_config in {"table_aware_clean", "table_aware_clean_context"})
+
 
 def chunk_document(document: dict, chunk_size: int = 180, overlap: int = 40) -> list[dict]:
+    """Build the default mixed table-aware chunks for one filing."""
     if chunk_size <= 0:
         raise ValueError("chunk_size must be positive.")
     if overlap < 0 or overlap >= chunk_size:
@@ -45,6 +106,7 @@ def chunk_document(document: dict, chunk_size: int = 180, overlap: int = 40) -> 
 
 
 def chunk_documents(documents: list[dict], chunk_size: int = 180, overlap: int = 40) -> list[dict]:
+    """Build the default mixed table-aware corpus."""
     chunks: list[dict] = []
     for document in documents:
         chunks.extend(chunk_document(document, chunk_size=chunk_size, overlap=overlap))
@@ -75,19 +137,25 @@ def split_sections(text: str) -> list[dict]:
 def chunk_stats(chunks: list[dict]) -> dict:
     lengths = [int(chunk.get("token_count") or simple_word_count(chunk.get("text", ""))) for chunk in chunks]
     by_source_type = Counter(chunk.get("source_type", "unknown") for chunk in chunks)
+    by_section = Counter(chunk.get("section_id", "unknown") for chunk in chunks)
+    by_config = Counter(chunk.get("chunk_config", DEFAULT_CHUNK_CONFIG) for chunk in chunks)
     retrievable = Counter(bool(chunk.get("retrievable", True)) for chunk in chunks)
     return {
         "num_chunks": len(chunks),
         "average_chunk_length": sum(lengths) / len(lengths) if lengths else 0.0,
         "by_source_type": dict(by_source_type),
+        "by_section": dict(by_section),
+        "by_chunk_config": dict(by_config),
         "retrievable_count": retrievable.get(True, 0),
         "non_retrievable_count": retrievable.get(False, 0),
         "table_row_count": by_source_type.get("table_row", 0),
         "table_summary_count": by_source_type.get("table_summary", 0),
+        "local_context_count": by_source_type.get("local_context", 0),
     }
 
 
 def write_chunk_audit(chunks: list[dict], out_dir: str | Path = "outputs/chunks") -> None:
+    """Write compact corpus audit files for a chunk set."""
     out_dir = ensure_dir(out_dir)
     rows = _audit_rows(chunks)
     with (out_dir / "chunk_audit.csv").open("w", newline="", encoding="utf-8") as f:
@@ -95,6 +163,81 @@ def write_chunk_audit(chunks: list[dict], out_dir: str | Path = "outputs/chunks"
         writer.writeheader()
         writer.writerows(rows)
     _write_chunk_samples(chunks, out_dir / "chunk_samples.md")
+    _write_non_retrievable_audit(chunks, out_dir / "non_retrievable_audit.csv")
+
+
+def _fixed_chunks(document: dict, chunk_config: str, chunk_size: int, overlap: int) -> list[dict]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive.")
+    if overlap < 0 or overlap >= chunk_size:
+        raise ValueError("overlap must be non-negative and smaller than chunk_size.")
+    words = normalize_whitespace(document.get("text", "")).replace("\n", " ").split()
+    base = f"{_chunk_base_id(document)}_{chunk_config}"
+    step = max(1, chunk_size - overlap)
+    section = {"section_id": "Mixed", "section_name": "Fixed-size chunk"}
+    chunks: list[dict] = []
+    for idx, start in enumerate(range(0, len(words), step)):
+        piece = " ".join(words[start : start + chunk_size])
+        if not piece:
+            continue
+        chunks.append(_make_chunk(document, section, base, idx, piece, "fixed"))
+        if start + chunk_size >= len(words):
+            break
+    return chunks
+
+
+def _section_narrative_chunks(document: dict, chunk_config: str, chunk_size: int, overlap: int) -> list[dict]:
+    base = f"{_chunk_base_id(document)}_{chunk_config}"
+    chunks: list[dict] = []
+    chunk_index = 0
+    for section in split_sections(document.get("text", "")):
+        if section.get("section_id") not in TARGET_SECTION_IDS:
+            continue
+        if _retrievability_reason(section.get("text", ""), section, "narrative", aggressive=True) in {"table_of_contents", "cover_page", "signatures", "exhibit_list", "navigation_only"}:
+            continue
+        narrative = _narrative_chunks(document, section, base, chunk_index, chunk_size, overlap)
+        chunks.extend(narrative)
+        chunk_index += len(narrative)
+    return chunks
+
+
+def _add_local_context_chunks_if_needed(document: dict, chunks: list[dict], chunk_size: int, overlap: int) -> list[dict]:
+    if any(chunk.get("source_type") == "local_context" for chunk in chunks):
+        return chunks
+    base = f"{_chunk_base_id(document)}_table_aware_clean_context"
+    next_index = max((int(chunk.get("chunk_index") or 0) for chunk in chunks), default=-1) + 1
+    additions: list[dict] = []
+    for section in split_sections(document.get("text", "")):
+        if section.get("section_id") != "Item 7":
+            continue
+        text = _local_context_text(section.get("text", ""))
+        if text:
+            additions.append(_make_chunk(document, section, base, next_index, text, "local_context"))
+            next_index += 1
+    return chunks + additions
+
+
+def _finalize_chunk_config(chunks: list[dict], chunk_config: str, aggressive_clean: bool = False) -> list[dict]:
+    finalized: list[dict] = []
+    for index, chunk in enumerate(chunks):
+        row = dict(chunk)
+        row["chunk_config"] = chunk_config
+        row.setdefault("value_aliases", _value_aliases(row))
+        row.setdefault("columns", [])
+        row.setdefault("values", [])
+        row.setdefault("unit", None)
+        reason = _retrievability_reason(row.get("text", ""), row, row.get("source_type", ""), aggressive=aggressive_clean)
+        if reason:
+            row["retrievable"] = False
+            row["non_retrievable_reason"] = reason
+        else:
+            row["retrievable"] = bool(row.get("retrievable", True))
+            row["non_retrievable_reason"] = None
+        if chunk_config not in str(row.get("chunk_id", "")):
+            row["chunk_id"] = f"{row.get('chunk_id', 'chunk')}_{chunk_config}"
+        row["chunk_index"] = int(row.get("chunk_index") or index)
+        finalized.append(row)
+    return finalized
 
 
 def _table_chunks(document: dict, section: dict, base: str, start_index: int) -> list[dict]:
@@ -351,8 +494,10 @@ def _make_chunk(
     token_count = simple_word_count(text)
     if retrievable is None:
         retrievable = _is_retrievable(text, section, source_type)
+    reason = None if retrievable else _retrievability_reason(text, section, source_type)
     return {
         "chunk_id": f"{base}_{source_type}_{chunk_index:04d}",
+        "chunk_config": DEFAULT_CHUNK_CONFIG,
         "text": text,
         "source_file": document.get("source_file", ""),
         "ticker": document.get("ticker", ""),
@@ -367,25 +512,39 @@ def _make_chunk(
         "columns": columns or [],
         "values": values or [],
         "unit": unit or "",
+        "value_aliases": _value_aliases({"values": values or [], "unit": unit or ""}),
         "chunk_index": chunk_index,
         "token_count": token_count,
         "retrievable": bool(retrievable),
+        "non_retrievable_reason": reason,
     }
 
 
 def _is_retrievable(text: str, section: dict, source_type: str) -> bool:
+    return _retrievability_reason(text, section, source_type) is None
+
+
+def _retrievability_reason(text: str, section: dict, source_type: str, aggressive: bool = False) -> str | None:
     normalized = normalize_whitespace(text).lower()
     if simple_word_count(text) < 8:
-        return False
+        return "too_short"
     if section.get("section_id") == "Front Matter":
-        return False
+        return "cover_page"
     if source_type.startswith("table") and section.get("section_id") not in {"Item 7", "Item 8"}:
-        return False
+        return "navigation_only"
     if "/mnt/data/" in normalized:
-        return False
-    if any(pattern in normalized for pattern in BOILERPLATE_PATTERNS):
-        return False
-    return True
+        return "header_footer"
+    if _looks_like_table_of_contents(normalized):
+        return "table_of_contents"
+    if "signature" in normalized and simple_word_count(text) < 120:
+        return "signatures"
+    if "exhibit index" in normalized or "exhibit and financial statement schedules" in normalized:
+        return "exhibit_list"
+    if "forward-looking statements" in normalized or "forward looking statements" in normalized:
+        return "forward_looking_boilerplate"
+    if aggressive and any(pattern in normalized for pattern in BOILERPLATE_PATTERNS):
+        return "navigation_only"
+    return None
 
 
 def _split_narrative_units(text: str) -> list[str]:
@@ -414,13 +573,50 @@ def _tail_units(units: list[str], max_tokens: int) -> list[str]:
 
 def _audit_rows(chunks: list[dict]) -> list[dict]:
     rows: list[dict] = [{"category": "total", "value": "all", "count": len(chunks)}]
-    for category, key in (("company", "company"), ("section", "section_id"), ("source_type", "source_type")):
+    for category, key in (
+        ("chunk_config", "chunk_config"),
+        ("company", "company"),
+        ("section", "section_id"),
+        ("source_type", "source_type"),
+        ("non_retrievable_reason", "non_retrievable_reason"),
+    ):
         counts = Counter(str(chunk.get(key) or "unknown") for chunk in chunks)
         rows.extend({"category": category, "value": value, "count": count} for value, count in sorted(counts.items()))
     retrievable = Counter(str(bool(chunk.get("retrievable", True))) for chunk in chunks)
     rows.extend({"category": "retrievable", "value": value, "count": count} for value, count in sorted(retrievable.items()))
     rows.append({"category": "average_token_count", "value": "all", "count": f"{chunk_stats(chunks)['average_chunk_length']:.2f}"})
     return rows
+
+
+def _write_non_retrievable_audit(chunks: list[dict], path: Path) -> None:
+    rows = [
+        {
+            "chunk_id": chunk.get("chunk_id"),
+            "chunk_config": chunk.get("chunk_config"),
+            "ticker": chunk.get("ticker"),
+            "year": chunk.get("year"),
+            "section_id": chunk.get("section_id"),
+            "source_type": chunk.get("source_type"),
+            "non_retrievable_reason": chunk.get("non_retrievable_reason"),
+            "text_preview": str(chunk.get("text", ""))[:240],
+        }
+        for chunk in chunks
+        if chunk.get("retrievable") is False
+    ]
+    with path.open("w", newline="", encoding="utf-8") as f:
+        fieldnames = [
+            "chunk_id",
+            "chunk_config",
+            "ticker",
+            "year",
+            "section_id",
+            "source_type",
+            "non_retrievable_reason",
+            "text_preview",
+        ]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def _write_chunk_samples(chunks: list[dict], path: Path) -> None:
@@ -440,6 +636,43 @@ def _write_chunk_samples(chunks: list[dict], path: Path) -> None:
         lines.append(f"  {chunk.get('text', '')[:500]}")
     lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _looks_like_table_of_contents(normalized_text: str) -> bool:
+    item_hits = len(re.findall(r"\bitem\s+\d+[a-z]?\b", normalized_text, re.I))
+    navigation_terms = sum(
+        1
+        for term in (
+            "table of contents",
+            "part i",
+            "part ii",
+            "part iii",
+            "part iv",
+            "form 10-k summary",
+            "management's discussion and analysis",
+            "financial statements",
+        )
+        if term in normalized_text
+    )
+    return "table of contents" in normalized_text or (item_hits >= 4 and navigation_terms >= 2)
+
+
+def _value_aliases(chunk: dict) -> list[str]:
+    aliases: list[str] = []
+    unit = str(chunk.get("unit") or "")
+    for value in chunk.get("values") or []:
+        formatted = _format_financial_value(str(value), unit)
+        aliases.append(formatted)
+        cleaned = str(value).replace("$", "").replace(",", "").strip()
+        if cleaned:
+            aliases.append(f"{cleaned} {unit}".strip())
+    seen: set[str] = set()
+    out: list[str] = []
+    for alias in aliases:
+        if alias and alias not in seen:
+            seen.add(alias)
+            out.append(alias)
+    return out
 
 
 def _canonical_item(raw: str) -> str:

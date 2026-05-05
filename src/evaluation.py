@@ -183,8 +183,12 @@ def evaluate_predictions(predictions: list[dict], questions: list[dict]) -> tupl
             "answer_coverage_at_3": answer_coverage(prediction.get("retrieved_context", ""), question)
             if prediction.get("retrieved_context")
             else None,
+            "answer_coverage_at_5": answer_coverage("\n".join(prediction.get("retrieved_texts", [])[:5]), question)
+            if prediction.get("retrieved_texts")
+            else None,
             "source_accuracy": source_accuracy(prediction, question),
             "source_accuracy_at_3": source_accuracy(prediction, question),
+            "section_accuracy_at_3": _section_accuracy_from_prediction(prediction, question),
             "table_row_recall_at_3": _table_row_recall_from_prediction(prediction, question),
         }
         details.append(detail)
@@ -210,7 +214,9 @@ def _summarize_system(system: str, rows: list[dict]) -> dict[str, Any]:
     negative_rows = [row for row in rows if row.get("expected_refusal")]
     coverage_1_rows = [row for row in rows if row.get("answer_coverage_at_1") is not None]
     coverage_rows = [row for row in rows if row.get("answer_coverage_at_3") is not None]
+    coverage_5_rows = [row for row in rows if row.get("answer_coverage_at_5") is not None]
     source_rows = [row for row in rows if row.get("source_accuracy") is not None]
+    section_rows = [row for row in rows if row.get("section_accuracy_at_3") is not None]
     table_row_rows = [row for row in rows if row.get("table_row_recall_at_3") is not None]
     return {
         "system": system,
@@ -231,8 +237,10 @@ def _summarize_system(system: str, rows: list[dict]) -> dict[str, Any]:
         "average_gold_answer_perplexity": _mean(row.get("gold_answer_perplexity") for row in rows),
         "answer_coverage_at_1": _mean(row.get("answer_coverage_at_1") for row in coverage_1_rows) if coverage_1_rows else float("nan"),
         "answer_coverage_at_3": _mean(row.get("answer_coverage_at_3") for row in coverage_rows) if coverage_rows else float("nan"),
+        "answer_coverage_at_5": _mean(row.get("answer_coverage_at_5") for row in coverage_5_rows) if coverage_5_rows else float("nan"),
         "source_accuracy": _mean(row.get("source_accuracy") for row in source_rows) if source_rows else float("nan"),
         "source_accuracy_at_3": _mean(row.get("source_accuracy_at_3") for row in source_rows) if source_rows else float("nan"),
+        "section_accuracy_at_3": _mean(row.get("section_accuracy_at_3") for row in section_rows) if section_rows else float("nan"),
         "table_row_recall_at_3": _mean(row.get("table_row_recall_at_3") for row in table_row_rows) if table_row_rows else float("nan"),
     }
 
@@ -254,7 +262,7 @@ def build_run_metadata(
     is_sample_file = path_name == "sample_questions.jsonl"
     if num_questions < min_research_questions:
         invalid_reasons.append(f"num_questions<{min_research_questions}")
-    if question_source not in {"verified", "verified_remapped"}:
+    if question_source not in {"verified", "verified_remapped", "research", "research_validated"}:
         invalid_reasons.append("question_source_not_verified")
     if is_sample_file:
         invalid_reasons.append("question_file_is_sample_questions")
@@ -303,6 +311,10 @@ def build_run_metadata(
 
 def _infer_question_source(question_path: str | Path) -> str:
     name = Path(question_path).name
+    if name == "questions_research.validated.jsonl":
+        return "research_validated"
+    if name == "questions_research.jsonl":
+        return "research"
     if name == "questions_verified.remapped.jsonl":
         return "verified_remapped"
     if name == "questions_verified.jsonl":
@@ -492,6 +504,16 @@ def _table_row_recall_from_prediction(prediction: dict, question: dict) -> bool 
         if meta.get("source_type") == "table_row":
             return True
     return False
+
+
+def _section_accuracy_from_prediction(prediction: dict, question: dict) -> bool | None:
+    expected = str(question.get("source_section") or "").strip()
+    if not expected:
+        return None
+    metas = prediction.get("retrieved_metadata") or []
+    if not metas:
+        return False
+    return any(str(meta.get("section_id") or "") == expected for meta in metas)
 
 
 def _summary_row(summary: pd.DataFrame, system: str) -> dict | None:

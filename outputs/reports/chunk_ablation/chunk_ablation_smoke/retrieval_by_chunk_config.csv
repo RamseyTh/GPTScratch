@@ -1,0 +1,3 @@
+chunk_config,answer_coverage_at_1,answer_coverage_at_3,answer_coverage_at_5,source_accuracy_at_3,section_accuracy_at_3,table_row_recall_at_3,wrong_section_count,answer_split_across_chunks_count,boilerplate_count,retrieval_miss_count,average_retrieval_latency
+fixed_128,0.0,1.0,1.0,1.0,0.0,,0,0,0,0,0.0205982085317373
+table_aware_clean,0.0,0.0,0.0,1.0,0.0,,1,0,0,0,0.0062105413526296

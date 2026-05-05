@@ -12,19 +12,7 @@ Adding retrieved 10-K passages to the GPT prompt should improve factual groundin
 - tokenizer: `model/hftokenizer`
 - all systems use the same checkpoint and tokenizer
 
-The compared systems are:
-- **Baseline GPT**: the assignment GPT receives only the question.
-- **RAG-GPT TF-IDF top-3**: the same assignment GPT receives retrieved Form 10-K chunks plus the question.
-- **Oracle Evidence GPT**: the same assignment GPT receives gold evidence.
-- **Random Context GPT**: the same assignment GPT receives random chunks as a noise control.
-
-## Data
-- raw filings: `data/raw/`
-- verified questions: `data/questions/questions_verified.jsonl`
-- remapped verified questions, if available: `data/questions/questions_verified.remapped.jsonl`
-- chunks: `outputs/chunks/chunks.jsonl`
-
-## Quick Run
+## Main Quick Run
 ```bash
 python main.py \
   --quick-run \
@@ -32,135 +20,113 @@ python main.py \
   --report
 ```
 
-This automatically uses:
-- `data/questions/questions_verified.remapped.jsonl` if present
-- otherwise `data/questions/questions_verified.jsonl`
-- `outputs/chunks/chunks.jsonl`
-- `model/model_weights.pt`
-- `model/hftokenizer`
+This runs:
+- `baseline_gpt`
+- `rag_gpt_tfidf_top3`
+- `oracle_gpt`
+- `random_context_gpt`
 
-## Install Verified Questions
-Install from a folder containing the uploaded files:
+The default question file is selected from `data/questions/`, preferring verified remapped questions when available. Any run using `--limit` is a smoke test and should not be used for final conclusions.
 
-```bash
-python scripts/install_verified_questions.py \
-  --source-dir /path/to/uploaded/files \
-  --out-dir data/questions
-```
+## Chunking Ablation
+The chunking ablation compares different ways to split 10-K filings into retrieval units. It tests whether better chunking reduces retrieval noise and improves RAG performance while the model, tokenizer, questions, retriever, top-k, prompts, and metrics stay fixed.
 
-Or install from explicit files:
+Build all chunk configs:
 
 ```bash
-python scripts/install_verified_questions.py \
-  --verified-jsonl questions_verified.jsonl \
-  --verified-csv questions_verified.csv \
-  --evidence-audit evidence_audit.md \
-  --validation-report validation_report.md \
-  --out-dir data/questions
-```
-
-The installer searches the current directory, project root, `/mnt/data`, `data/questions`, `outputs/questions/verified`, the parent project folder, and `~/Downloads`. It writes:
-
-- `data/questions/questions_verified.jsonl`
-- `data/questions/questions_verified.csv`
-- `data/questions/evidence_audit.md`
-- `data/questions/validation_report.md`
-- `data/questions/questions.jsonl`
-- `data/questions/install_summary.json`
-- `data/questions/question_distribution.csv`
-
-To inspect available candidate files:
-
-```bash
-python scripts/install_verified_questions.py \
-  --list-candidates \
-  --source-dir /mnt/data
-```
-
-## Build Chunks
-```bash
-python scripts/build_corpus.py \
+python scripts/build_all_chunk_configs.py \
   --data-dir data/raw \
-  --out outputs/chunks/chunks.jsonl \
-  --chunk-size 180 \
-  --overlap 40
+  --configs fixed_128,fixed_256,fixed_512,section_180,table_row_only,table_aware_mixed,table_aware_clean,table_aware_clean_context
 ```
 
-## Remap Verified Evidence
-If chunks have been rebuilt, old verified chunk IDs may not exist. Remap evidence by gold evidence text:
+Run the research ablation:
 
-```bash
-python scripts/validate_verified_questions.py \
-  --questions data/questions/questions_verified.jsonl \
-  --chunks outputs/chunks/chunks.jsonl \
-  --out data/questions/questions_verified.remapped.jsonl
-```
-
-Outputs:
-- `data/questions/questions_verified.remapped.jsonl`
-- `data/questions/evidence_remap_report.md`
-- `data/questions/evidence_remap_summary.csv`
-
-## Inspect Tokenizer and Checkpoint
-```bash
-python scripts/inspect_tokenizer.py \
-  --tokenizer-dir model/hftokenizer \
-  --checkpoint model/model_weights.pt
-```
-
-```bash
-python scripts/inspect_checkpoint.py \
-  --checkpoint model/model_weights.pt \
-  --tokenizer-dir model/hftokenizer
-```
-
-Both should report vocab size `10000` and compatibility `PASS`.
-
-## Smoke Test
 ```bash
 python main.py \
   --quick-run \
-  --limit 3 \
-  --run-id smoke_test \
+  --experiment chunk_ablation \
+  --questions data/questions/questions_research.validated.jsonl \
+  --chunk-configs fixed_128,fixed_256,fixed_512,section_180,table_row_only,table_aware_mixed,table_aware_clean,table_aware_clean_context \
+  --run-id chunk_ablation_research \
   --report
 ```
 
-Any run using `--limit` is a smoke test and is not valid for research conclusions.
+If `questions_research.validated.jsonl` is unavailable, run a diagnostic ablation:
+
+```bash
+python main.py \
+  --quick-run \
+  --experiment chunk_ablation \
+  --questions data/questions/questions_verified.remapped.jsonl \
+  --chunk-configs fixed_128,fixed_256,fixed_512,section_180,table_row_only,table_aware_mixed,table_aware_clean,table_aware_clean_context \
+  --run-id chunk_ablation_diagnostic \
+  --report
+```
+
+The verified/remapped set may contain table-of-contents or item-number artifacts, so results from that set should be interpreted as diagnostic.
+
+## Chunk Configurations
+- `fixed_128`: fixed 128-token chunks with 32-token overlap.
+- `fixed_256`: fixed 256-token chunks with 64-token overlap.
+- `fixed_512`: fixed 512-token chunks with 128-token overlap.
+- `section_180`: section-aware narrative chunks without table rows.
+- `table_row_only`: table rows and table summaries only.
+- `table_aware_mixed`: narrative, table_row, table_summary, and local_context chunks.
+- `table_aware_clean`: mixed chunks with stronger filtering for table of contents, cover pages, signatures, and boilerplate.
+- `table_aware_clean_context`: clean mixed chunks plus local_context around MD&A and table-related evidence.
 
 ## Outputs
-- `outputs/runs/{run_id}/predictions.jsonl`
-- `outputs/runs/{run_id}/evaluation_summary.csv`
-- `outputs/runs/{run_id}/evaluation_details.jsonl`
-- `outputs/runs/{run_id}/retrieval_diagnostics.jsonl`
-- `outputs/runs/{run_id}/run_metadata.json`
-- `outputs/reports/{run_id}/final_report.md`
-- `outputs/reports/{run_id}/comparison_table.csv`
-- `outputs/reports/{run_id}/retrieval_table.csv`
-- `outputs/reports/{run_id}/latency_table.csv`
+Main run:
+- `outputs/runs/{run_id}/`
+- `outputs/reports/{run_id}/`
+
+Chunk ablation:
+- `outputs/chunks/{chunk_config}/`
+- `outputs/runs/chunk_ablation/{run_id}/{chunk_config}/`
+- `outputs/reports/chunk_ablation/{run_id}/`
+
+Ablation report tables:
+- `chunk_ablation_summary.csv`
+- `retrieval_by_chunk_config.csv`
+- `generation_by_chunk_config.csv`
+- `question_type_breakdown.csv`
+- `failure_by_chunk_config.csv`
+- `latency_by_chunk_config.csv`
+- `best_config_summary.csv`
+- `final_report.md`
 
 ## Metrics
-- exact match
+- answer_coverage@1
+- answer_coverage@3
+- answer_coverage@5
+- source_accuracy@3
+- section_accuracy@3
+- table_row_recall@3
+- wrong_section_count
+- answer_split_across_chunks_count
 - token F1
 - numeric accuracy
-- refusal accuracy
-- answer coverage@1 and answer coverage@3
-- source accuracy@3
-- table-row recall@3
-- gold-answer loss
 - gold-answer perplexity
-- perplexity delta vs baseline
-- generation latency
 - retrieval latency
+- generation latency
 - total latency
 
+## Interpreting Chunking Results
+- If `fixed_128` has high answer-split errors, chunks are too small.
+- If `fixed_512` has high wrong-section errors, chunks are too broad.
+- If `table_row_only` improves numeric questions but hurts risk or explanation questions, chunking should be question-type-aware.
+- If `table_aware_clean` improves coverage, filtering table-of-contents and boilerplate helped.
+- If `table_aware_clean_context` improves explanation questions, local context is useful.
+
 ## Additional Scripts
-- `scripts/install_verified_questions.py`: installs verified benchmark artifacts.
-- `scripts/validate_verified_questions.py`: remaps verified evidence IDs to current chunks.
-- `scripts/inspect_tokenizer.py`: checks `model/hftokenizer`.
-- `scripts/inspect_checkpoint.py`: checks `model/model_weights.pt`.
-- `scripts/build_corpus.py`: preprocesses filings and builds chunks.
-- `scripts/inspect_retrieval.py`: inspects retrieval results.
-- `scripts/run_report.py`: rebuilds reports from saved outputs.
+- `scripts/build_all_chunk_configs.py`: builds all chunking ablation corpora.
+- `scripts/build_corpus.py`: builds one chunk corpus.
+- `scripts/inspect_retrieval.py`: inspects retrieval results for questions.
+- `scripts/run_report.py`: rebuilds standard or chunk-ablation reports.
+- `scripts/clean_verified_questions.py`: removes table-of-contents and item-number artifacts from verified questions.
+- `scripts/validate_questions.py`: validates evidence-grounded question files.
+- `scripts/install_verified_questions.py`: installs verified question artifacts.
+- `scripts/validate_verified_questions.py`: remaps verified evidence IDs to current chunk IDs.
 
 ## Academic Honesty
 Some scaffolding, debugging prompts, and documentation drafts were generated with OpenAI Codex/ChatGPT. All code was reviewed, edited, and tested by the author. The submitted experimental design, implementation choices, and results are the author's responsibility.

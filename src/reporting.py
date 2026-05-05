@@ -64,6 +64,73 @@ def build_report(run_id: str, outputs_dir: str | Path = "outputs") -> Path:
     return report_path
 
 
+def build_chunk_ablation_report(run_id: str, outputs_dir: str | Path = "outputs") -> Path:
+    """Aggregate per-config chunking ablation outputs into tables and markdown."""
+    outputs_dir = Path(outputs_dir)
+    root_run_dir = outputs_dir / "runs" / "chunk_ablation" / run_id
+    report_dir = ensure_dir(outputs_dir / "reports" / "chunk_ablation" / run_id)
+    config_dirs = [path for path in sorted(root_run_dir.iterdir()) if path.is_dir()] if root_run_dir.exists() else []
+
+    retrieval_rows: list[dict] = []
+    generation_rows: list[dict] = []
+    latency_rows: list[dict] = []
+    failure_rows: list[dict] = []
+    qtype_rows: list[dict] = []
+    summary_rows: list[dict] = []
+
+    for config_dir in config_dirs:
+        chunk_config = config_dir.name
+        summary = _read_csv(config_dir / "evaluation_summary.csv")
+        diagnostics = read_jsonl(config_dir / "retrieval_diagnostics.jsonl")
+        details = read_jsonl(config_dir / "evaluation_details.jsonl")
+        run_config = read_json(config_dir / "run_config.json", default={}) or {}
+        chunking = run_config.get("chunking_summary", {}) or {}
+        rag = _row(summary, "rag_gpt_tfidf_top3") if not summary.empty else {}
+        baseline = _row(summary, "baseline_gpt") if not summary.empty else {}
+
+        retrieval_metrics = _retrieval_metrics_for_config(chunk_config, rag, diagnostics)
+        retrieval_rows.append(retrieval_metrics)
+        generation_rows.extend(_generation_rows_for_config(chunk_config, summary, baseline))
+        latency_rows.extend(_latency_rows_for_config(chunk_config, summary, baseline))
+        failure_rows.extend(_failure_rows_for_config(chunk_config, diagnostics))
+        qtype_rows.extend(_question_type_rows_for_config(chunk_config, details, diagnostics))
+        summary_rows.append(
+            {
+                "chunk_config": chunk_config,
+                "total_chunks": chunking.get("num_chunks"),
+                "retrievable_chunks": chunking.get("retrievable_count"),
+                "average_token_count": chunking.get("average_chunk_length"),
+                **retrieval_metrics,
+                "rag_token_f1": rag.get("token_f1"),
+                "rag_numeric_accuracy": rag.get("numeric_accuracy"),
+                "rag_gold_answer_perplexity": rag.get("average_gold_answer_perplexity"),
+                "rag_total_latency": rag.get("average_total_latency"),
+            }
+        )
+
+    summary_df = pd.DataFrame(summary_rows)
+    retrieval_df = pd.DataFrame(retrieval_rows)
+    generation_df = pd.DataFrame(generation_rows)
+    qtype_df = pd.DataFrame(qtype_rows)
+    failure_df = pd.DataFrame(failure_rows)
+    latency_df = pd.DataFrame(latency_rows)
+    best = _best_chunk_config(summary_df)
+    best_df = pd.DataFrame([best]) if best else pd.DataFrame([{"chunk_config": "not_available"}])
+
+    summary_df.to_csv(report_dir / "chunk_ablation_summary.csv", index=False)
+    retrieval_df.to_csv(report_dir / "retrieval_by_chunk_config.csv", index=False)
+    generation_df.to_csv(report_dir / "generation_by_chunk_config.csv", index=False)
+    qtype_df.to_csv(report_dir / "question_type_breakdown.csv", index=False)
+    failure_df.to_csv(report_dir / "failure_by_chunk_config.csv", index=False)
+    latency_df.to_csv(report_dir / "latency_by_chunk_config.csv", index=False)
+    best_df.to_csv(report_dir / "best_config_summary.csv", index=False)
+
+    report_text = render_chunk_ablation_report(run_id, summary_df, retrieval_df, generation_df, qtype_df, failure_df, latency_df, best)
+    report_path = report_dir / "final_report.md"
+    report_path.write_text(report_text, encoding="utf-8")
+    return report_path
+
+
 def build_oracle_sanity_report(run_id: str, oracle_sanity: dict, summary: pd.DataFrame, outputs_dir: str | Path = "outputs") -> Path:
     report_dir = ensure_dir(Path(outputs_dir) / "reports" / run_id)
     lines = [
@@ -606,3 +673,261 @@ def _num(value) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def render_chunk_ablation_report(
+    run_id: str,
+    summary: pd.DataFrame,
+    retrieval: pd.DataFrame,
+    generation: pd.DataFrame,
+    question_types: pd.DataFrame,
+    failures: pd.DataFrame,
+    latency: pd.DataFrame,
+    best: dict | None,
+) -> str:
+    """Render the markdown report for the chunking ablation experiment."""
+    best_config = (best or {}).get("chunk_config", "not available")
+    best_cov = (best or {}).get("answer_coverage_at_3")
+    diagnostic_note = ""
+    if best_cov is None or _num(best_cov) < 0.70:
+        diagnostic_note = "No chunk configuration reached answer_coverage@3 >= 0.70, so retrieval remains the bottleneck."
+    lines = [
+        "# Chunking Ablation Report: RAG over Financial Filings",
+        "",
+        "## Abstract",
+        (
+            "This experiment compares multiple ways to split Form 10-K filings into retrieval units while keeping the "
+            "same local GPT checkpoint, tokenizer, questions, TF-IDF retriever, top-k, prompts, and evaluation code. "
+            f"Best chunking configuration: {best_config}."
+        ),
+        "",
+        "## Hypothesis",
+        "Structure-aware and table-aware chunking should improve retrieval answer coverage and reduce retrieval noise compared with fixed-size chunking.",
+        "",
+        "## Experimental Design",
+        "\n".join(
+            [
+                "- Same local GPT checkpoint: `model/model_weights.pt`.",
+                "- Same tokenizer: `model/hftokenizer`.",
+                "- Same systems: baseline_gpt, rag_gpt_tfidf_top3, oracle_gpt, random_context_gpt.",
+                "- Same TF-IDF retriever, top-k, context budget, prompts, and metrics.",
+                "- Only the chunking configuration changes.",
+            ]
+        ),
+        "",
+        "## Chunking Configurations",
+        "\n".join(
+            [
+                "- `fixed_128`: fixed 128-token control with 32-token overlap.",
+                "- `fixed_256`: fixed 256-token control with 64-token overlap.",
+                "- `fixed_512`: fixed 512-token control with 128-token overlap.",
+                "- `section_180`: section-aware narrative chunks without table rows.",
+                "- `table_row_only`: table_row and table_summary chunks only.",
+                "- `table_aware_mixed`: default mixed narrative, table row, table summary, and local context chunks.",
+                "- `table_aware_clean`: mixed chunks with aggressive non-retrievable filtering.",
+                "- `table_aware_clean_context`: clean mixed chunks plus MD&A/table local context.",
+            ]
+        ),
+        "",
+        "## Dataset",
+        "The ablation uses the question file supplied to `main.py`; if it is `questions_verified.remapped.jsonl`, results should be read as diagnostic if question-quality artifacts remain.",
+        "",
+        "## Retrieval Results",
+        _markdown_table_generic(retrieval),
+        "",
+        "## Generation Results",
+        _markdown_table_generic(generation),
+        "",
+        "## Question-Type Breakdown",
+        _markdown_table_generic(question_types),
+        "",
+        "## Latency and Overhead",
+        _markdown_table_generic(latency),
+        "",
+        "## Failure Analysis",
+        _markdown_table_generic(failures),
+        "",
+        "## Best Configuration",
+        f"Best chunking configuration: {best_config}",
+        "",
+        "Decision rule: highest answer_coverage@3, then fewer wrong_section errors, fewer answer_split_across_chunks errors, lower gold-answer perplexity, and reasonable latency.",
+        "",
+        "## Discussion",
+        diagnostic_note
+        or "The best configuration should be interpreted by comparing retrieval coverage, generation metrics, and latency together.",
+        "",
+        "## Limitations",
+        "\n".join(
+            [
+                "- The local GPT is not instruction-tuned, so exact match can be harsh.",
+                "- TF-IDF is transparent and reproducible but limited compared with learned retrievers.",
+                "- Question quality and table extraction quality can still dominate results.",
+                "- Training logs are unavailable; the ablation compares inference-time retrieval units.",
+            ]
+        ),
+        "",
+        "## Conclusion",
+        (
+            f"{best_config} is selected by the ablation decision rule. "
+            + (diagnostic_note or "Use the CSV tables to compare whether structure-aware chunking improves answer coverage and reduces retrieval noise.")
+        ),
+        "",
+        "## Reproducibility Tables",
+        "\n".join(
+            [
+                "- `chunk_ablation_summary.csv`",
+                "- `retrieval_by_chunk_config.csv`",
+                "- `generation_by_chunk_config.csv`",
+                "- `question_type_breakdown.csv`",
+                "- `failure_by_chunk_config.csv`",
+                "- `latency_by_chunk_config.csv`",
+                "- `best_config_summary.csv`",
+            ]
+        ),
+        "",
+        "## Academic Honesty",
+        ACADEMIC_HONESTY,
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def _read_csv(path: Path) -> pd.DataFrame:
+    return pd.read_csv(path) if path.exists() else pd.DataFrame()
+
+
+def _retrieval_metrics_for_config(chunk_config: str, rag: dict, diagnostics: list[dict]) -> dict:
+    noise = Counter(str(row.get("noise_reason", "none")) for row in diagnostics)
+    return {
+        "chunk_config": chunk_config,
+        "answer_coverage_at_1": rag.get("answer_coverage_at_1"),
+        "answer_coverage_at_3": rag.get("answer_coverage_at_3"),
+        "answer_coverage_at_5": rag.get("answer_coverage_at_5"),
+        "source_accuracy_at_3": rag.get("source_accuracy_at_3"),
+        "section_accuracy_at_3": rag.get("section_accuracy_at_3"),
+        "table_row_recall_at_3": rag.get("table_row_recall_at_3"),
+        "wrong_section_count": noise.get("wrong_section", 0),
+        "answer_split_across_chunks_count": noise.get("answer_split_across_chunks", 0),
+        "boilerplate_count": noise.get("boilerplate", 0),
+        "retrieval_miss_count": noise.get("retrieval_miss", 0),
+        "average_retrieval_latency": rag.get("average_retrieval_latency"),
+    }
+
+
+def _generation_rows_for_config(chunk_config: str, summary: pd.DataFrame, baseline: dict) -> list[dict]:
+    rows = []
+    baseline_ppl = _num(baseline.get("average_gold_answer_perplexity")) if baseline else 0.0
+    for _, row in summary.iterrows():
+        item = row.to_dict()
+        item["chunk_config"] = chunk_config
+        item["perplexity_delta_vs_baseline"] = _num(item.get("average_gold_answer_perplexity")) - baseline_ppl
+        rows.append(item)
+    return rows
+
+
+def _latency_rows_for_config(chunk_config: str, summary: pd.DataFrame, baseline: dict) -> list[dict]:
+    rows = []
+    baseline_latency = _num(baseline.get("average_total_latency")) if baseline else 0.0
+    for _, row in summary.iterrows():
+        item = {
+            "chunk_config": chunk_config,
+            "system": row.get("system"),
+            "average_generation_latency": row.get("average_generation_latency"),
+            "average_retrieval_latency": row.get("average_retrieval_latency"),
+            "average_total_latency": row.get("average_total_latency"),
+            "latency_delta_vs_baseline": _num(row.get("average_total_latency")) - baseline_latency,
+            "average_prompt_tokens": row.get("average_prompt_tokens"),
+            "average_completion_tokens": row.get("average_completion_tokens"),
+        }
+        rows.append(item)
+    return rows
+
+
+def _failure_rows_for_config(chunk_config: str, diagnostics: list[dict]) -> list[dict]:
+    counts = Counter(str(row.get("noise_reason", "none")) for row in diagnostics)
+    if not counts:
+        return [{"chunk_config": chunk_config, "failure_type": "none", "count": 0}]
+    return [{"chunk_config": chunk_config, "failure_type": key, "count": value} for key, value in sorted(counts.items())]
+
+
+def _question_type_rows_for_config(chunk_config: str, details: list[dict], diagnostics: list[dict]) -> list[dict]:
+    diagnostics_by_qid = {row.get("question_id"): row for row in diagnostics}
+    grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for row in details:
+        if row.get("system") != "rag_gpt_tfidf_top3":
+            continue
+        qtype = str(row.get("question_type") or diagnostics_by_qid.get(row.get("question_id"), {}).get("question_type") or "unknown")
+        grouped[(chunk_config, qtype)].append(row)
+    rows = []
+    for (config, qtype), values in sorted(grouped.items()):
+        rows.append(
+            {
+                "chunk_config": config,
+                "question_type": qtype,
+                "num_questions": len(values),
+                "token_f1": sum(_num(row.get("token_f1")) for row in values) / len(values),
+                "numeric_accuracy": _mean_available(row.get("numeric_accuracy") for row in values),
+                "answer_coverage_at_3": _mean_available(row.get("answer_coverage_at_3") for row in values),
+                "gold_answer_perplexity": _mean_available(row.get("gold_answer_perplexity") for row in values),
+            }
+        )
+    return rows
+
+
+def _mean_available(values) -> float:
+    clean = []
+    for value in values:
+        try:
+            if pd.isna(value):
+                continue
+            clean.append(float(value))
+        except (TypeError, ValueError):
+            continue
+    return sum(clean) / len(clean) if clean else float("nan")
+
+
+def _best_chunk_config(summary: pd.DataFrame) -> dict | None:
+    if summary.empty:
+        return None
+    work = summary.copy()
+    for column in (
+        "answer_coverage_at_3",
+        "wrong_section_count",
+        "answer_split_across_chunks_count",
+        "rag_gold_answer_perplexity",
+        "rag_total_latency",
+    ):
+        if column not in work.columns:
+            work[column] = 0.0
+    work = work.sort_values(
+        by=[
+            "answer_coverage_at_3",
+            "wrong_section_count",
+            "answer_split_across_chunks_count",
+            "rag_gold_answer_perplexity",
+            "rag_total_latency",
+        ],
+        ascending=[False, True, True, True, True],
+    )
+    return work.iloc[0].to_dict()
+
+
+def _markdown_table_generic(df: pd.DataFrame, max_rows: int = 12) -> str:
+    if df.empty:
+        return "No rows available."
+    small = df.head(max_rows).copy()
+    columns = small.columns.tolist()[:12]
+    lines = [
+        "| " + " | ".join(columns) + " |",
+        "| " + " | ".join(["---"] * len(columns)) + " |",
+    ]
+    for _, row in small.iterrows():
+        values = []
+        for col in columns:
+            value = row[col]
+            if isinstance(value, float):
+                values.append("" if pd.isna(value) else f"{value:.4f}")
+            else:
+                values.append(str(value))
+        lines.append("| " + " | ".join(values) + " |")
+    return "\n".join(lines)

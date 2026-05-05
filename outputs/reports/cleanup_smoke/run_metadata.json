@@ -1,0 +1,41 @@
+{
+  "num_questions": 3,
+  "is_smoke_test": true,
+  "valid_for_research": false,
+  "invalid_reasons": [
+    "num_questions<50",
+    "numeric_fact<5"
+  ],
+  "min_research_questions": 50,
+  "question_file": "data/questions/questions_verified.remapped.jsonl",
+  "question_source": "verified_remapped",
+  "limit": 3,
+  "question_type_counts": {
+    "numeric_fact": 3
+  },
+  "question_quality_counts": {},
+  "ticker_counts": {
+    "AAPL": 3
+  },
+  "company_counts": {
+    "Apple": 3
+  },
+  "missing_evidence_rate": 0.3333333333333333,
+  "oracle_answer_coverage_at_3": 1.0,
+  "rag_answer_coverage_at_3": 0.6666666666666666,
+  "retrieval_quality": "weak",
+  "benchmark_quality": "verified_or_smoke",
+  "run_id": "cleanup_smoke",
+  "chunks_file": "outputs/chunks/chunks.jsonl",
+  "checkpoint": "model/model_weights.pt",
+  "checkpoint_path": "model/model_weights.pt",
+  "tokenizer_dir": "model/hftokenizer",
+  "systems": [
+    "baseline_gpt",
+    "rag_gpt_tfidf_top3",
+    "oracle_gpt",
+    "random_context_gpt"
+  ],
+  "allow_small_research_report": false,
+  "strict_research_report": false
+}

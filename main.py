@@ -25,6 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tokenizer-dir", default="model/hftokenizer")
     parser.add_argument("--run-id", default="run")
     parser.add_argument("--report", action="store_true")
+    parser.add_argument("--report-only", action="store_true", help="Rebuild report files from an existing run without generation.")
     parser.add_argument("--limit", type=int, default=None)
 
     parser.add_argument("--d-model", type=int, default=None)
@@ -47,6 +48,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--allow-small-research-report", action="store_true")
     parser.add_argument("--strict-research-report", action="store_true")
     parser.add_argument("--ablation", action="store_true")
+    parser.add_argument("--experiment", default="standard", choices=["standard", "chunk_ablation"], help="Experiment mode.")
+    parser.add_argument("--chunk-configs", default="table_aware_mixed", help="Comma-separated chunk configs for chunk_ablation.")
     parser.add_argument("--open-corpus", action="store_true", help="Disable ticker/year metadata filtering during retrieval.")
     parser.add_argument("--context-token-budget", type=int, default=700)
     parser.add_argument("--numeric-extraction", action=argparse.BooleanOptionalAction, default=True)

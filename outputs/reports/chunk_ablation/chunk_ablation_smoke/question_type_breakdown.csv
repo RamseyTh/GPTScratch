@@ -1,0 +1,3 @@
+chunk_config,question_type,num_questions,token_f1,numeric_accuracy,answer_coverage_at_3,gold_answer_perplexity
+fixed_128,text_fact,1,0.0,,1.0,4314.841309725075
+table_aware_clean,text_fact,1,0.0,,0.0,4706.928843270829

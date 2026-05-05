@@ -1,0 +1,5 @@
+system,num_questions,exact_match,token_f1,numeric_accuracy,numeric_generation_accuracy,numeric_extraction_accuracy,refusal_accuracy,hallucination_rate,average_generation_latency,average_retrieval_latency,average_total_latency,average_prompt_tokens,average_completion_tokens,average_gold_answer_loss,average_gold_answer_perplexity,answer_coverage_at_1,answer_coverage_at_3,answer_coverage_at_5,source_accuracy,source_accuracy_at_3,section_accuracy_at_3,table_row_recall_at_3,perplexity_delta_vs_baseline
+baseline_gpt,1,0.0,0.0,,,,,,0.010621123015880585,0.0,0.027770336717367172,29.0,1.0,8.227022171020508,3740.678050945507,,,,0.0,0.0,0.0,,0.0
+oracle_gpt,1,0.0,0.0,,,,,,0.009717041626572609,0.0,0.02864004112780094,66.0,1.0,8.23843002319336,3783.5954856167887,1.0,1.0,1.0,0.0,0.0,0.0,,42.917434671281626
+rag_gpt_tfidf_top3,1,0.0,0.0,,,,,,0.044084999710321426,0.0062105413526296616,0.10913687571883202,256.0,1.0,8.456790924072266,4706.928843270829,0.0,0.0,0.0,1.0,1.0,0.0,,966.250792325322
+random_context_gpt,1,0.0,0.0,,,,,,0.04860474914312363,0.0,0.11694054119288921,256.0,1.0,8.469717025756836,4768.1660104015245,0.0,0.0,0.0,0.0,0.0,0.0,,1027.4879594560175

@@ -1,13 +1,21 @@
+"""Small coordinator for the clean local GPT RAG workflow.
+
+`main.py` owns argument parsing.  This module resolves defaults, checks that
+the local tokenizer and checkpoint agree, and then hands execution to
+`src.experiments`.
+"""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from types import SimpleNamespace
+from typing import Any
 
 from .checkpoint import infer_checkpoint_vocab_size
-from .experiments import ensure_chunks, ensure_questions, run_experiment
 from .hftokenizer import HFTokenizer
-from .utils import ensure_dir, project_root, resolve_question_file
+from .experiments import run_experiment
+from .reporting import build_chunk_ablation_report, build_report
+from .utils import ensure_dir, read_jsonl, resolve_question_file
 
 
 DEFAULT_SYSTEMS = ["baseline_gpt", "rag_gpt_tfidf_top3", "oracle_gpt", "random_context_gpt"]
@@ -15,126 +23,155 @@ DEFAULT_SYSTEMS = ["baseline_gpt", "rag_gpt_tfidf_top3", "oracle_gpt", "random_c
 
 @dataclass
 class PipelineConfig:
+    """Configuration for a quick-run or report-only project execution."""
+
     run_id: str
-    quick_run: bool
-    questions: Path | None
-    chunks: Path
-    checkpoint: Path
-    tokenizer_dir: Path
-    report: bool
-    limit: int | None
-    systems: list[str]
-    top_k: int
-    context_token_budget: int
-    overwrite: bool
-    resume: bool
+    quick_run: bool = False
+    report: bool = False
+    report_only: bool = False
+    questions: Path | None = None
+    chunks: Path = Path("outputs/chunks/chunks.jsonl")
+    checkpoint: Path = Path("model/model_weights.pt")
+    tokenizer_dir: Path = Path("model/hftokenizer")
+    systems: list[str] = field(default_factory=lambda: list(DEFAULT_SYSTEMS))
+    top_k: int = 3
+    context_token_budget: int = 700
+    limit: int | None = None
+    overwrite: bool = False
+    resume: bool = False
 
 
 class PipelineRunner:
-    def __init__(self, config: PipelineConfig, args=None):
+    """Resolve inputs, validate model/tokenizer compatibility, and run experiments."""
+
+    def __init__(self, config: PipelineConfig, args: Any | None = None):
         self.config = config
-        self.args = args or SimpleNamespace()
-        self.question_source = "sample"
-        self.questions_loaded = 0
+        self.args = args
         self.compatibility_pass = False
+        self.question_file: Path | None = None
+        self.question_source = ""
+        self.num_questions = 0
+        self.result: dict[str, Any] = {}
 
     @classmethod
     def from_args(cls, args) -> "PipelineRunner":
-        systems = parse_systems(getattr(args, "systems", None))
+        """Build a runner from parsed CLI arguments."""
+        systems = _parse_systems(getattr(args, "systems", None))
+        resolved_questions = Path(args.questions) if getattr(args, "questions", None) else None
         config = PipelineConfig(
             run_id=args.run_id,
             quick_run=bool(getattr(args, "quick_run", False)),
-            questions=Path(args.questions) if args.questions else None,
-            chunks=Path(args.chunks or "outputs/chunks/chunks.jsonl"),
-            checkpoint=Path(args.checkpoint or "model/model_weights.pt"),
-            tokenizer_dir=Path(args.tokenizer_dir or "model/hftokenizer"),
-            report=bool(args.report),
-            limit=args.limit,
+            report=bool(getattr(args, "report", False)),
+            report_only=bool(getattr(args, "report_only", False)),
+            questions=resolved_questions,
+            chunks=Path(args.chunks),
+            checkpoint=Path(args.checkpoint),
+            tokenizer_dir=Path(args.tokenizer_dir),
             systems=systems,
-            top_k=int(getattr(args, "retrieval_top_k", None) or 3),
+            top_k=int(getattr(args, "retrieval_top_k", 3)),
             context_token_budget=int(getattr(args, "context_token_budget", 700)),
+            limit=getattr(args, "limit", None),
             overwrite=bool(getattr(args, "overwrite", False)),
             resume=bool(getattr(args, "resume", False)),
         )
+        args.systems = systems
         return cls(config, args=args)
 
-    def run(self) -> dict:
+    def run(self) -> dict[str, Any]:
+        """Execute the configured workflow and return output paths."""
         self.bootstrap_outputs()
+        if self.config.report_only:
+            report_path = self.write_report()
+            return {"run_dir": str(Path("outputs") / "runs" / self.config.run_id), "report_path": str(report_path)}
         self.resolve_inputs()
         self.check_tokenizer_and_checkpoint()
         self.ensure_chunks()
         self.load_questions()
         self.print_startup_summary()
-        summary = self.run_experiment()
-        if self.config.report:
-            self.write_report()
-        return summary
+        self.result = run_experiment(self.args)
+        return self.summary()
 
     def bootstrap_outputs(self) -> None:
+        """Create top-level output folders used by all workflows."""
         ensure_dir("outputs/runs")
         ensure_dir("outputs/reports")
         ensure_dir("outputs/chunks")
+        ensure_dir("outputs/indexes")
 
     def resolve_inputs(self) -> None:
-        question_path, source = resolve_question_file(self.config.questions)
-        self.config.questions = question_path
+        """Resolve quick-run question defaults and pass them back to args."""
+        path, source = resolve_question_file(self.config.questions)
+        self.question_file = path
         self.question_source = source
-        self.args.questions = str(question_path)
+        self.args.questions = str(path)
         self.args.question_source = source
         self.args.chunks = str(self.config.chunks)
         self.args.checkpoint = str(self.config.checkpoint)
         self.args.tokenizer_dir = str(self.config.tokenizer_dir)
-        self.args.retrieval_top_k = self.config.top_k
-        self.args.context_token_budget = self.config.context_token_budget
         self.args.systems = self.config.systems
 
     def check_tokenizer_and_checkpoint(self) -> None:
+        """Fail early if the HF tokenizer does not match the checkpoint vocab."""
         tokenizer = HFTokenizer(self.config.tokenizer_dir)
-        checkpoint_vocab_size = infer_checkpoint_vocab_size(self.config.checkpoint)
-        if tokenizer.vocab_size != checkpoint_vocab_size:
+        checkpoint_vocab = infer_checkpoint_vocab_size(self.config.checkpoint)
+        if tokenizer.vocab_size != checkpoint_vocab:
             raise ValueError(
-                "Tokenizer/checkpoint compatibility failed. "
-                f"Tokenizer vocab_size={tokenizer.vocab_size}; checkpoint vocab_size={checkpoint_vocab_size}."
+                "Tokenizer/checkpoint mismatch. "
+                f"The checkpoint expects vocab_size={checkpoint_vocab}, but {self.config.tokenizer_dir} "
+                f"has vocab_size={tokenizer.vocab_size}."
             )
         self.compatibility_pass = True
 
+    def check_model_and_tokenizer(self) -> None:
+        """Backward-compatible name used by some tests and earlier prompts."""
+        self.check_tokenizer_and_checkpoint()
+
     def ensure_chunks(self) -> None:
-        ensure_chunks(str(self.config.chunks), self.args.data_dir, self.args.chunk_size, self.args.overlap)
+        """Let the experiment builder create standard chunks when needed."""
+        if getattr(self.args, "experiment", "standard") == "chunk_ablation":
+            return
+        if not Path(self.args.chunks).exists():
+            print(f"Chunks missing at {self.args.chunks}; they will be built from {self.args.data_dir}.")
 
     def load_questions(self) -> None:
-        questions = ensure_questions(str(self.config.questions))
-        if self.config.limit is not None:
-            questions = questions[: self.config.limit]
-        self.questions_loaded = len(questions)
+        """Count questions after any limit so startup output is honest."""
+        rows = read_jsonl(self.args.questions)
+        self.num_questions = min(len(rows), self.config.limit) if self.config.limit else len(rows)
 
-    def run_experiment(self) -> dict:
-        return run_experiment(self.args)
-
-    def write_report(self) -> None:
-        # run_experiment writes the report when args.report is true.
-        return None
+    def write_report(self) -> Path:
+        """Rebuild the requested report from saved run artifacts."""
+        if getattr(self.args, "experiment", "standard") == "chunk_ablation":
+            return build_chunk_ablation_report(self.config.run_id)
+        return build_report(self.config.run_id)
 
     def print_startup_summary(self) -> None:
-        mode = "quick-run" if self.config.quick_run else "standard"
-        systems = ", ".join(self.config.systems)
-        print(f"Project root: {project_root()}")
+        """Print a concise reproducibility summary before generation starts."""
+        print(f"Project root: {Path.cwd()}")
         print(f"Run ID: {self.config.run_id}")
-        print(f"Mode: {mode}")
+        print(f"Mode: {'quick-run' if self.config.quick_run else 'custom'}")
+        print(f"Experiment: {getattr(self.args, 'experiment', 'standard')}")
         print(f"Checkpoint: {self.config.checkpoint}")
         print(f"Tokenizer: {self.config.tokenizer_dir}")
         print(f"Tokenizer/checkpoint compatibility: {'PASS' if self.compatibility_pass else 'FAIL'}")
-        print(f"Questions: {self.config.questions}")
+        print(f"Questions: {self.question_file}")
         print(f"Question source: {self.question_source}")
-        print(f"Questions loaded: {self.questions_loaded}")
+        print(f"Questions loaded: {self.num_questions}")
         print(f"Chunks: {self.config.chunks}")
-        print(f"Systems: {systems}")
+        print(f"Systems: {', '.join(self.config.systems)}")
         print(f"Report: {'enabled' if self.config.report else 'disabled'}")
 
+    def summary(self) -> dict[str, Any]:
+        """Return the experiment result in the shape expected by `main.py`."""
+        return self.result or {
+            "run_dir": str(Path("outputs") / "runs" / self.config.run_id),
+            "report_path": None,
+        }
 
-def parse_systems(value: str | list[str] | None) -> list[str]:
+
+def _parse_systems(value) -> list[str]:
     if value is None:
         return list(DEFAULT_SYSTEMS)
     if isinstance(value, list):
-        return value
-    systems = [item.strip() for item in value.split(",") if item.strip()]
+        return value or list(DEFAULT_SYSTEMS)
+    systems = [item.strip() for item in str(value).split(",") if item.strip()]
     return systems or list(DEFAULT_SYSTEMS)

@@ -77,22 +77,22 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 ## Generation Quality
 | system | exact_match | token_f1 | numeric_accuracy | refusal_accuracy | answer_coverage_at_3 | average_gold_answer_perplexity | perplexity_delta_vs_baseline | average_total_latency |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| baseline_gpt | 0.0000 | 0.0123 | 0.0000 | 0.0000 |  | 17527.7044 | 0.0000 | 0.5920 |
-| oracle_gpt | 0.0000 | 0.0088 | 0.0000 | 0.0000 | 1.0000 | 15114.1272 | -2413.5772 | 0.7484 |
-| rag_gpt_tfidf_top3 | 0.0000 | 0.0003 | 0.5052 | 0.0000 | 0.4207 | 46307.2436 | 28779.5392 | 0.1883 |
-| random_context_gpt | 0.0000 | 0.0028 | 0.0000 | 0.0000 | 0.1218 | 15148.2500 | -2379.4544 | 0.2558 |
+| baseline_gpt | 0.0000 | 0.0123 | 0.0000 | 0.0000 |  | 17527.7044 | 0.0000 | 0.7416 |
+| oracle_gpt | 0.0000 | 0.0088 | 0.0000 | 0.0000 | 1.0000 | 15114.1272 | -2413.5772 | 0.8738 |
+| rag_gpt_tfidf_top3 | 0.0000 | 0.0003 | 0.5052 | 0.0000 | 0.4207 | 46307.2436 | 28779.5392 | 0.2301 |
+| random_context_gpt | 0.0000 | 0.0028 | 0.0000 | 0.0000 | 0.1218 | 15148.2500 | -2379.4544 | 0.2971 |
 
 ## RAG vs Baseline Conclusion
 - token F1 delta: -0.0120
 - gold-answer perplexity delta: 28779.5392
 - numeric accuracy delta: 0.5052
-- latency delta: -0.4037s
+- latency delta: -0.5116s
 - RAG answer coverage@3: 0.4207
 
 ## Latency Tradeoff
-- baseline total latency: 0.5920s
-- RAG total latency: 0.1883s
-- latency delta vs baseline: -0.4037s
+- baseline total latency: 0.7416s
+- RAG total latency: 0.2301s
+- latency delta vs baseline: -0.5116s
 
 ## Ablations
 No ablation tables were generated for this run.

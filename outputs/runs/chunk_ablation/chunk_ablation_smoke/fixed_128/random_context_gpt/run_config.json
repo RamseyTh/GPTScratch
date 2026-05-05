@@ -1,0 +1,135 @@
+{
+  "quick_run": true,
+  "questions": "data/questions/questions_research.validated.jsonl",
+  "chunks": "outputs/chunks/fixed_128/chunks.jsonl",
+  "data_dir": "data/raw",
+  "checkpoint": "model/model_weights.pt",
+  "tokenizer_dir": "model/hftokenizer",
+  "run_id": "chunk_ablation/chunk_ablation_smoke/fixed_128",
+  "report": false,
+  "report_only": false,
+  "limit": 1,
+  "d_model": null,
+  "n_heads": null,
+  "layers": null,
+  "vocab_size": null,
+  "max_seq_len": null,
+  "device": "cpu",
+  "max_new_tokens": 1,
+  "temperature": 1.0,
+  "top_k_sampling": 50,
+  "greedy": true,
+  "allow_random_init": false,
+  "inspect_tokenizer": false,
+  "systems": [
+    "baseline_gpt",
+    "rag_gpt_tfidf_top3",
+    "oracle_gpt",
+    "random_context_gpt"
+  ],
+  "overwrite": false,
+  "resume": false,
+  "min_research_questions": 50,
+  "allow_small_final_report": false,
+  "allow_small_research_report": false,
+  "strict_research_report": false,
+  "ablation": false,
+  "experiment": "standard",
+  "chunk_configs": "fixed_128,table_aware_clean",
+  "open_corpus": false,
+  "context_token_budget": 700,
+  "numeric_extraction": true,
+  "numeric_extraction_only": false,
+  "oracle_first": false,
+  "strict_oracle_gate": false,
+  "oracle_latency_warning_seconds": 5.0,
+  "chunk_size": 128,
+  "overlap": 32,
+  "retrieval_method": "tfidf",
+  "retrieval_top_k": 3,
+  "question_source": "research_validated",
+  "chunk_config": "fixed_128",
+  "checkpoint_path": "model/model_weights.pt",
+  "requested_checkpoint_path": "model/model_weights.pt",
+  "model_config": {
+    "d_model": 256,
+    "n_heads": 8,
+    "layers": 4,
+    "vocab_size": 10000,
+    "max_seq_len": 256
+  },
+  "tokenizer_metadata": {
+    "tokenizer_dir": "model/hftokenizer",
+    "tokenizer_class": "GPT2Tokenizer",
+    "vocab_size": 10000,
+    "model_max_length": 1024,
+    "eos_token": "<|endoftext|>",
+    "eos_token_id": 0,
+    "bos_token": "<|endoftext|>",
+    "unk_token": "<|endoftext|>",
+    "checkpoint_path": "model/model_weights.pt",
+    "checkpoint_vocab_size": 10000,
+    "compatible_with_checkpoint": true
+  },
+  "checkpoint_format": "raw_state_dict",
+  "num_questions": 1,
+  "num_chunks": 4379,
+  "run_metadata": {
+    "num_questions": 1,
+    "is_smoke_test": true,
+    "valid_for_research": false,
+    "invalid_reasons": [
+      "num_questions<50",
+      "text_fact<5"
+    ],
+    "min_research_questions": 50,
+    "question_file": "data/questions/questions_research.validated.jsonl",
+    "question_source": "research_validated",
+    "limit": 1,
+    "question_type_counts": {
+      "text_fact": 1
+    },
+    "ticker_counts": {
+      "AAPL": 1
+    },
+    "company_counts": {
+      "Apple": 1
+    },
+    "missing_evidence_rate": 0.0,
+    "oracle_answer_coverage_at_3": 1.0,
+    "rag_answer_coverage_at_3": 1.0,
+    "retrieval_quality": "acceptable",
+    "run_id": "chunk_ablation/chunk_ablation_smoke/fixed_128",
+    "chunks_file": "outputs/chunks/fixed_128/chunks.jsonl",
+    "checkpoint": "model/model_weights.pt",
+    "checkpoint_path": "model/model_weights.pt",
+    "tokenizer_dir": "model/hftokenizer",
+    "systems": [
+      "baseline_gpt",
+      "rag_gpt_tfidf_top3",
+      "oracle_gpt",
+      "random_context_gpt"
+    ],
+    "allow_small_research_report": false,
+    "strict_research_report": false
+  },
+  "chunking_summary": {
+    "num_chunks": 4379,
+    "average_chunk_length": 127.9230417903631,
+    "by_source_type": {
+      "fixed": 4379
+    },
+    "by_section": {
+      "Mixed": 4379
+    },
+    "by_chunk_config": {
+      "fixed_128": 4379
+    },
+    "retrievable_count": 3715,
+    "non_retrievable_count": 664,
+    "table_row_count": 0,
+    "table_summary_count": 0,
+    "local_context_count": 0
+  },
+  "oracle_sanity": null
+}

@@ -1,0 +1,2 @@
+chunk_config,total_chunks,retrievable_chunks,average_token_count,answer_coverage_at_1,answer_coverage_at_3,answer_coverage_at_5,source_accuracy_at_3,section_accuracy_at_3,table_row_recall_at_3,wrong_section_count,answer_split_across_chunks_count,boilerplate_count,retrieval_miss_count,average_retrieval_latency,rag_token_f1,rag_numeric_accuracy,rag_gold_answer_perplexity,rag_total_latency
+fixed_128,4379,3715,127.9230417903631,0.0,1.0,1.0,1.0,0.0,,0,0,0,0,0.0205982085317373,0.0,,4314.841309725075,0.690505750477314

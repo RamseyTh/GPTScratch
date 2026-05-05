@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import time
+import shutil
+import pickle
 from dataclasses import asdict
+from types import SimpleNamespace
 from pathlib import Path
 
 import pandas as pd
 
 from .answer_extraction import extract_numeric_answer
-from .chunking import chunk_documents, chunk_stats, write_chunk_audit
+from .chunking import CHUNK_CONFIGS, chunk_documents_for_config, chunk_stats, parse_chunk_configs, write_chunk_audit
 from .evaluation import build_run_metadata, evaluate_predictions, numeric_match, oracle_sanity_check, write_evaluation_outputs
 from .local_gpt import LocalGPT, LocalGPTConfig
 from .preprocess import load_raw_documents, smoke_documents
 from .prompts import baseline_prompt, oracle_prompt, rag_prompt, random_context_prompt
-from .reporting import build_oracle_sanity_report, build_report
+from .reporting import build_chunk_ablation_report, build_oracle_sanity_report, build_report
 from .retrieval import (
     Retriever,
     build_retrieval_query,
@@ -24,6 +27,9 @@ from .utils import deterministic_sample, ensure_dir, read_jsonl, warn, write_jso
 
 
 def run_experiment(args) -> dict:
+    if getattr(args, "experiment", "standard") == "chunk_ablation":
+        return run_chunk_ablation(args)
+
     outputs_dir = Path("outputs")
     run_dir = outputs_dir / "runs" / args.run_id
     report_dir = outputs_dir / "reports" / args.run_id
@@ -31,7 +37,7 @@ def run_experiment(args) -> dict:
     ensure_dir(report_dir)
     ensure_dir(outputs_dir / "chunks")
 
-    chunks = ensure_chunks(args.chunks, args.data_dir, args.chunk_size, args.overlap)
+    chunks = ensure_chunks(args.chunks, args.data_dir, args.chunk_size, args.overlap, getattr(args, "chunk_config", "table_aware_mixed"))
     questions = ensure_questions(args.questions)
     if args.limit:
         questions = questions[: args.limit]
@@ -41,7 +47,7 @@ def run_experiment(args) -> dict:
     print(f"Questions loaded: {len(questions)}")
     print(f"Limit used: {args.limit}")
     initial_smoke = bool(args.limit is not None) or len(questions) < args.min_research_questions or args.question_source == "sample"
-    initial_valid = (not initial_smoke) and args.question_source in {"verified", "verified_remapped"}
+    initial_valid = (not initial_smoke) and args.question_source in {"verified", "verified_remapped", "research", "research_validated"}
     print(f"Smoke test: {initial_smoke}")
     print(f"Initial valid_for_research: {initial_valid}")
     print(f"Run ID: {args.run_id}")
@@ -164,7 +170,98 @@ def run_experiment(args) -> dict:
     }
 
 
-def ensure_chunks(chunks_path: str, data_dir: str, chunk_size: int, overlap: int) -> list[dict]:
+def run_chunk_ablation(args) -> dict:
+    """Run the same local GPT RAG experiment across named chunk configs."""
+    configs = parse_chunk_configs(getattr(args, "chunk_configs", "table_aware_mixed"))
+    outputs_dir = Path("outputs")
+    root_run_dir = ensure_dir(outputs_dir / "runs" / "chunk_ablation" / args.run_id)
+    root_report_dir = ensure_dir(outputs_dir / "reports" / "chunk_ablation" / args.run_id)
+    ensure_dir(outputs_dir / "indexes")
+    per_config_results: list[dict] = []
+    for chunk_config in configs:
+        per_config_results.append(_run_chunk_config(args, chunk_config))
+
+    metadata = {
+        "experiment": "chunk_ablation",
+        "run_id": args.run_id,
+        "chunk_configs": configs,
+        "question_file": str(args.questions),
+        "checkpoint": str(args.checkpoint),
+        "tokenizer_dir": str(args.tokenizer_dir),
+        "retriever": getattr(args, "retrieval_method", "tfidf"),
+        "top_k": getattr(args, "retrieval_top_k", 3),
+        "context_token_budget": getattr(args, "context_token_budget", 700),
+        "systems": _parse_systems(getattr(args, "systems", None)),
+        "config_results": per_config_results,
+    }
+    write_json(root_run_dir / "run_metadata.json", metadata)
+    report_path = None
+    if getattr(args, "report", False):
+        report_path = build_chunk_ablation_report(args.run_id, outputs_dir=outputs_dir)
+    return {
+        "run_dir": str(root_run_dir),
+        "report_dir": str(root_report_dir),
+        "report_path": str(report_path) if report_path else None,
+        "chunk_configs": configs,
+    }
+
+
+def _run_chunk_config(args, chunk_config: str) -> dict:
+    spec = CHUNK_CONFIGS[chunk_config]
+    chunk_path = Path("outputs") / "chunks" / chunk_config / "chunks.jsonl"
+    ensure_chunks(
+        str(chunk_path),
+        args.data_dir,
+        int(spec["chunk_size"]),
+        int(spec["overlap"]),
+        chunk_config=chunk_config,
+    )
+    sub_args = SimpleNamespace(**vars(args))
+    sub_args.experiment = "standard"
+    sub_args.ablation = False
+    sub_args.report = False
+    sub_args.chunk_config = chunk_config
+    sub_args.chunk_size = int(spec["chunk_size"])
+    sub_args.overlap = int(spec["overlap"])
+    sub_args.chunks = str(chunk_path)
+    sub_args.run_id = f"chunk_ablation/{args.run_id}/{chunk_config}"
+    result = run_experiment(sub_args)
+    _write_per_system_ablation_outputs(Path(result["run_dir"]), _parse_systems(getattr(args, "systems", None)))
+    _write_placeholder_index(chunk_config)
+    return {"chunk_config": chunk_config, **result}
+
+
+def _write_per_system_ablation_outputs(config_run_dir: Path, systems: list[str]) -> None:
+    predictions = read_jsonl(config_run_dir / "predictions.jsonl")
+    details = read_jsonl(config_run_dir / "evaluation_details.jsonl")
+    diagnostics = read_jsonl(config_run_dir / "retrieval_diagnostics.jsonl")
+    summary_path = config_run_dir / "evaluation_summary.csv"
+    summary = pd.read_csv(summary_path) if summary_path.exists() else pd.DataFrame()
+    run_config = (config_run_dir / "run_config.json")
+    for system in systems:
+        system_dir = ensure_dir(config_run_dir / system)
+        write_jsonl(system_dir / "predictions.jsonl", [row for row in predictions if row.get("system") == system])
+        write_jsonl(system_dir / "evaluation_details.jsonl", [row for row in details if row.get("system") == system])
+        system_summary = summary[summary["system"] == system] if not summary.empty and "system" in summary else pd.DataFrame()
+        system_summary.to_csv(system_dir / "evaluation_summary.csv", index=False)
+        system_summary.to_csv(system_dir / "latency_table.csv", index=False)
+        if system == "rag_gpt_tfidf_top3":
+            write_jsonl(system_dir / "retrieval_diagnostics.jsonl", diagnostics)
+        else:
+            write_jsonl(system_dir / "retrieval_diagnostics.jsonl", [])
+        if run_config.exists():
+            shutil.copyfile(run_config, system_dir / "run_config.json")
+
+
+def _write_placeholder_index(chunk_config: str) -> None:
+    index_dir = ensure_dir(Path("outputs") / "indexes" / chunk_config)
+    index_path = index_dir / "tfidf_index.pkl"
+    if not index_path.exists():
+        with index_path.open("wb") as f:
+            pickle.dump({"chunk_config": chunk_config, "note": "TF-IDF index is built in memory by src.retrieval.Retriever."}, f)
+
+
+def ensure_chunks(chunks_path: str, data_dir: str, chunk_size: int, overlap: int, chunk_config: str = "table_aware_mixed") -> list[dict]:
     path = Path(chunks_path)
     if path.exists():
         chunks = read_jsonl(path)
@@ -175,7 +272,7 @@ def ensure_chunks(chunks_path: str, data_dir: str, chunk_size: int, overlap: int
     if not documents:
         warn("No 10-K files found under data/raw. Creating synthetic smoke-test chunks; final evaluation requires real filings.")
         documents = smoke_documents()
-    chunks = chunk_documents(documents, chunk_size=chunk_size, overlap=overlap)
+    chunks = chunk_documents_for_config(documents, chunk_config=chunk_config, chunk_size=chunk_size, overlap=overlap)
     write_jsonl(path, chunks)
     write_chunk_audit(chunks, path.parent)
     stats = chunk_stats(chunks)
@@ -287,7 +384,16 @@ def _run_systems(
             systems.append(
                 ("rag_gpt_tfidf_top3", rag_prompt(question_text, retrieved_ctx, candidate), retrieved, retrieval_latency, retrieved_ctx, extraction, query)
             )
-            diagnostics.append(retrieval_diagnostic(question, query, filters, retrieved, retrieval_latency))
+            diagnostics.append(
+                retrieval_diagnostic(
+                    question,
+                    query,
+                    filters,
+                    retrieved,
+                    retrieval_latency,
+                    chunk_config=getattr(args, "chunk_config", ""),
+                )
+            )
 
         gold_context = str(question.get("gold_evidence_text") or "")
         if "oracle_gpt" in wanted:
@@ -305,6 +411,7 @@ def _run_systems(
                     "metadata": {
                         key: chunk.get(key, "")
                         for key in (
+                            "chunk_config",
                             "source_file",
                             "ticker",
                             "company",
@@ -316,6 +423,7 @@ def _run_systems(
                             "table_title",
                             "row_label",
                             "chunk_index",
+                            "token_count",
                             "retrievable",
                         )
                     },
@@ -336,6 +444,7 @@ def _run_systems(
             prediction = {
                 "question_id": question.get("question_id", f"q_{q_index:04d}"),
                 "system": system_name,
+                "chunk_config": getattr(args, "chunk_config", ""),
                 "question": question_text,
                 "gold_answer": question.get("answer", ""),
                 "prediction": generation["text"],
@@ -404,6 +513,10 @@ def _summary_value(summary, system: str, column: str):
 
 def _infer_question_source(path: str | Path) -> str:
     name = Path(path).name
+    if name == "questions_research.validated.jsonl":
+        return "research_validated"
+    if name == "questions_research.jsonl":
+        return "research"
     if name == "questions_verified.remapped.jsonl":
         return "verified_remapped"
     if name == "questions_verified.jsonl":
