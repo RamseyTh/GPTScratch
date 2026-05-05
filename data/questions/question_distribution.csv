@@ -1,0 +1,15 @@
+field,value,count
+question_type,explanation,120
+question_type,negative,14
+question_type,numeric_fact,67
+question_type,risk_factor,56
+question_type,text_fact,14
+ticker,AAPL,43
+ticker,AMZN,40
+ticker,GOOG,37
+ticker,META,37
+ticker,MSFT,38
+ticker,NVDA,38
+ticker,TSLA,38
+expected_refusal,false,257
+expected_refusal,true,14

@@ -1,0 +1,22 @@
+Python 3.10 or 3.11 recommended.
+
+1. Install dependencies:
+pip install -r requirements.txt
+
+2. Required model files:
+model/model_weights.pt
+model/hftokenizer/
+
+3. Raw filing location:
+data/raw/
+
+4. Verified question location:
+data/questions/questions_verified.jsonl
+
+5. Main command:
+python main.py --quick-run --run-id final_verified_run --report
+
+6. Smoke test:
+python main.py --quick-run --limit 3 --run-id smoke_test --report
+
+No OpenAI API key is required.

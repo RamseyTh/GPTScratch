@@ -1,0 +1,35 @@
+{
+  "num_questions": 271,
+  "question_type_counts": {
+    "numeric_fact": 67,
+    "text_fact": 14,
+    "risk_factor": 56,
+    "explanation": 120,
+    "negative": 14
+  },
+  "ticker_counts": {
+    "AAPL": 43,
+    "AMZN": 40,
+    "GOOG": 37,
+    "META": 37,
+    "MSFT": 38,
+    "NVDA": 38,
+    "TSLA": 38
+  },
+  "expected_refusal_counts": {
+    "false": 257,
+    "true": 14
+  },
+  "source_paths": {
+    "questions_verified_jsonl": "/Users/sichaoliu/Desktop/JHU MSAI/GPT/RAGFinal/gpt_rag/rag_financial_filings/data/questions/questions_verified.jsonl"
+  },
+  "output_paths": {
+    "questions_verified_jsonl": "data/questions/questions_verified.jsonl",
+    "questions_jsonl": "data/questions/questions.jsonl",
+    "questions_verified_csv": "data/questions/questions_verified.csv",
+    "evidence_audit": "data/questions/evidence_audit.md",
+    "validation_report": "data/questions/validation_report.md"
+  },
+  "question_distribution_csv": "data/questions/question_distribution.csv",
+  "dry_run": false
+}

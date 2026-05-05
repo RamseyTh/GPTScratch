@@ -1,0 +1,13 @@
+question_id,system,failure_type,exact_match,token_f1,numeric_accuracy,answer_coverage_at_3,noise_reason
+AAPL_2025_NUMERIC_FACT_87f37103,baseline_gpt,numeric_unit_error,False,0.0,False,,none
+AAPL_2025_NUMERIC_FACT_87f37103,rag_gpt_tfidf_top3,correct,False,0.0,True,True,none
+AAPL_2025_NUMERIC_FACT_87f37103,oracle_gpt,numeric_unit_error,False,0.0,False,True,none
+AAPL_2025_NUMERIC_FACT_87f37103,random_context_gpt,numeric_unit_error,False,0.0,False,True,none
+AAPL_2025_NUMERIC_FACT_01b17ed7,baseline_gpt,numeric_unit_error,False,0.0,False,,none
+AAPL_2025_NUMERIC_FACT_01b17ed7,rag_gpt_tfidf_top3,correct,False,0.0,True,True,none
+AAPL_2025_NUMERIC_FACT_01b17ed7,oracle_gpt,numeric_unit_error,False,0.0,False,True,none
+AAPL_2025_NUMERIC_FACT_01b17ed7,random_context_gpt,numeric_unit_error,False,0.0,False,True,none
+AAPL_2025_NUMERIC_FACT_7bf60a5b,baseline_gpt,wrong_section,False,0.0,False,,wrong_section
+AAPL_2025_NUMERIC_FACT_7bf60a5b,rag_gpt_tfidf_top3,wrong_section,False,0.0,False,False,wrong_section
+AAPL_2025_NUMERIC_FACT_7bf60a5b,oracle_gpt,wrong_section,False,0.0,False,True,wrong_section
+AAPL_2025_NUMERIC_FACT_7bf60a5b,random_context_gpt,wrong_section,False,0.0,False,False,wrong_section

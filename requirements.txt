@@ -1,0 +1,10 @@
+torch
+numpy
+pandas
+scikit-learn
+beautifulsoup4
+tqdm
+PyYAML
+matplotlib
+pymupdf
+
