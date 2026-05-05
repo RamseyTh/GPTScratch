@@ -1,5 +1,0 @@
-system,average_generation_latency,average_retrieval_latency,average_total_latency,average_prompt_tokens,average_completion_tokens
-baseline_gpt,0.0188473196079333,0.0,0.0289861671626567,35.0,2.0
-oracle_gpt,0.0604412493606408,0.0,0.1053828466683626,131.0,2.0
-rag_gpt_tfidf_top3,0.128680986041824,0.0376329167435566,0.2707525125394265,256.0,2.0
-random_context_gpt,0.138887428989013,0.0,0.2102842653791109,256.0,2.0

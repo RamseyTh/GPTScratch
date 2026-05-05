@@ -1,40 +1,40 @@
 category,value,count
-total,all,5130
-company,Amazon,499
-company,Apple,666
-company,Google,755
-company,Meta,840
-company,Microsoft,641
-company,NVIDIA,914
-company,Tesla,815
-section,Front Matter,137
-section,Item 1,324
-section,Item 10,34
+total,all,4155
+company,Amazon,392
+company,Apple,572
+company,Google,637
+company,Meta,641
+company,Microsoft,536
+company,NVIDIA,733
+company,Tesla,644
+section,Front Matter,124
+section,Item 1,249
+section,Item 10,29
 section,Item 11,16
 section,Item 12,16
 section,Item 13,16
 section,Item 14,19
-section,Item 15,756
-section,Item 16,475
-section,Item 1A,853
+section,Item 15,671
+section,Item 16,374
+section,Item 1A,600
 section,Item 1B,15
-section,Item 1C,51
-section,Item 2,28
-section,Item 3,104
-section,Item 4,45
-section,Item 5,57
+section,Item 1C,38
+section,Item 2,27
+section,Item 3,84
+section,Item 4,42
+section,Item 5,51
 section,Item 6,18
-section,Item 7,528
-section,Item 7A,69
-section,Item 8,1394
+section,Item 7,429
+section,Item 7A,61
+section,Item 8,1118
 section,Item 9,15
-section,Item 9A,70
-section,Item 9B,69
-section,Item 9C,21
+section,Item 9A,57
+section,Item 9B,66
+section,Item 9C,20
 source_type,local_context,15
-source_type,narrative,3432
+source_type,narrative,2457
 source_type,table_row,1544
 source_type,table_summary,139
-retrievable,False,1834
-retrievable,True,3296
-average_token_count,all,112.64
+retrievable,False,1797
+retrievable,True,2358
+average_token_count,all,139.21

@@ -34,7 +34,7 @@
   },
   "missing_evidence_rate": 0.007782101167315175,
   "oracle_answer_coverage_at_3": 1.0,
-  "rag_answer_coverage_at_3": 0.47232472324723246,
+  "rag_answer_coverage_at_3": 0.42066420664206644,
   "retrieval_quality": "weak",
   "run_id": "final_verified_run",
   "chunks_file": "outputs/chunks/chunks.jsonl",

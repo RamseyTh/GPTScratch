@@ -1,0 +1,5 @@
+category,value,count
+total,valid,108
+total,rejected,0
+valid_by_question_type,explanation,104
+valid_by_question_type,text_fact,4

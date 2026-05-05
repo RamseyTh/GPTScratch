@@ -1,5 +1,0 @@
-system,answer_coverage_at_1,answer_coverage_at_3,source_accuracy_at_3,table_row_recall_at_3,average_retrieval_latency
-baseline_gpt,,,0.0,0.0,0.0
-oracle_gpt,1.0,1.0,0.0,0.0,0.0
-rag_gpt_tfidf_top3,1.0,1.0,1.0,0.0,0.0009190831333398
-random_context_gpt,1.0,1.0,1.0,0.0,0.0

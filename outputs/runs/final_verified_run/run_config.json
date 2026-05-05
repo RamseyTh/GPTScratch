@@ -69,7 +69,7 @@
   },
   "checkpoint_format": "raw_state_dict",
   "num_questions": 271,
-  "num_chunks": 5130,
+  "num_chunks": 4155,
   "run_metadata": {
     "num_questions": 271,
     "is_smoke_test": false,
@@ -106,7 +106,7 @@
     },
     "missing_evidence_rate": 0.007782101167315175,
     "oracle_answer_coverage_at_3": 1.0,
-    "rag_answer_coverage_at_3": 0.47232472324723246,
+    "rag_answer_coverage_at_3": 0.42066420664206644,
     "retrieval_quality": "weak",
     "run_id": "final_verified_run",
     "chunks_file": "outputs/chunks/chunks.jsonl",
@@ -123,16 +123,16 @@
     "strict_research_report": false
   },
   "chunking_summary": {
-    "num_chunks": 5130,
-    "average_chunk_length": 112.63762183235868,
+    "num_chunks": 4155,
+    "average_chunk_length": 139.21227436823105,
     "by_source_type": {
       "table_row": 1544,
       "table_summary": 139,
-      "narrative": 3432,
+      "narrative": 2457,
       "local_context": 15
     },
-    "retrievable_count": 3296,
-    "non_retrievable_count": 1834,
+    "retrievable_count": 2358,
+    "non_retrievable_count": 1797,
     "table_row_count": 1544,
     "table_summary_count": 139
   },

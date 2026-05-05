@@ -23,7 +23,7 @@ No example available in this run.
 - baseline prediction: , and the first time of the first time of the first time of the first time of the first time of the first time .
 - candidate system: rag_gpt_tfidf_top3
 - candidate prediction: " .
-- retrieved preview: [1: AAPL 2025 Item 7 table_row] Apple (AAPL) fiscal 2025 taxes. table. Financial Statements in Part II, Item were $8 million in 2025, and $10 million in 2024 (dollars in millions).  [2: AAPL 2025 Item 8 table_row] Apple (AAPL) fiscal 2025 Financial table table. Apple Inc. | were $2.025 billion ($2,025 million) in 2025, $10 million in 2024, and $40 million in 2023 (dollars in millions).  [3: AAPL 2025 Item 7 table_row] Apple (AAPL) fiscal 2025 Mac. table. Apple Inc. | were $2.025 billion ($2,0...
+- retrieved preview: [1: AAPL 2025 Item 8 table_row] Apple (AAPL) fiscal 2025 Financial table table. Apple Inc. | were $2.025 billion ($2,025 million) in 2025, $10 million in 2024, and $40 million in 2023 (dollars in millions).  [2: AAPL 2025 Item 7 table_row] Apple (AAPL) fiscal 2025 Mac. table. Apple Inc. | were $2.025 billion ($2,025 million) in 2025, and $10 million in 2024 (dollars in millions).  [3: AAPL 2025 Item 7 table_row] Apple (AAPL) fiscal 2025 taxes. table. Financial Statements in Part II, Item were...
 - failure type: wrong_section
 
 ## retrieval_finds_evidence_generator_fails
@@ -45,7 +45,7 @@ No example available in this run.
 - baseline prediction: , and the first time of the first time of the first time of the first time of the first time of the first time of the first time of the first time .
 - candidate system: random_context_gpt
 - candidate prediction: .
-- retrieved preview: [1: AMZN 2025 Item 8 narrative] filed a complaint against Amazon Web Services, Inc. in the United States District Court for the Northern District of Illinois. The complaint alleged, among other things, that Amazon S3 and DynamoDB infringe U.S. Patent Nos. 7,814,170; 7,103,640; and 7,233,978. The complaint sought an unspecified amount of damages, enhanced damages, attorneys’ fees, costs, interest, and injunctive relief. In April 2024, a jury found that Amazon infringed the asserted patents and...
+- retrieved preview: [1: GOOG 2025 Item 8 table_row] Google (GOOG) fiscal 2025 2025, we had no commercial paper outstanding. table. For additional information, see Note were 6 in 2025, and 8 in 2026.  [2: NVDA 2025 Item 16 narrative] 13. Code Section 409A; Tax Qualification. (a) Purchase Rights granted under the 423 Component are intended to be exempt from the application of Section 409A of the Code under Treasury Regulation Section 1.409A-1(b)(5)(ii). Purchase Rights granted under the Non-423 Component to U.S. t...
 - failure type: numeric_unit_error
 
 ## oracle_succeeds

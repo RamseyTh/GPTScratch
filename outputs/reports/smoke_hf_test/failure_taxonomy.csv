@@ -1,5 +1,0 @@
-question_id,system,failure_type,exact_match,token_f1,numeric_accuracy,answer_coverage_at_3,noise_reason
-SMOKE_001,baseline_gpt,numeric_unit_error,False,0.0,False,,none
-SMOKE_001,rag_gpt_tfidf_top3,correct,False,0.0,True,True,none
-SMOKE_001,oracle_gpt,numeric_unit_error,False,0.0,False,True,none
-SMOKE_001,random_context_gpt,numeric_unit_error,False,0.0,False,True,none
