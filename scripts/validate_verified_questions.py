@@ -1,3 +1,5 @@
+"""Remap verified question evidence IDs to the current chunk file."""
+
 from __future__ import annotations
 
 import argparse

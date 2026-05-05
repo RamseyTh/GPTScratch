@@ -1,3 +1,5 @@
+"""Checkpoint inspection and loading helpers for the assignment GPTModel."""
+
 from __future__ import annotations
 
 import re
@@ -93,6 +95,7 @@ def infer_checkpoint_vocab_size_from_state_dict(state_dict: dict[str, torch.Tens
 
 
 def infer_checkpoint_vocab_size(checkpoint_path: str | Path) -> int:
+    """Infer vocab size from the embedding or output projection shapes."""
     checkpoint = load_checkpoint_object(checkpoint_path)
     state_dict = extract_state_dict(checkpoint)
     vocab_size = infer_checkpoint_vocab_size_from_state_dict(state_dict)
@@ -189,14 +192,14 @@ def load_model_from_checkpoint(
     vocab_size: int | None = None,
     max_seq_len: int | None = None,
 ) -> tuple[GPTModel, GPTConfig, str]:
+    """Load GPTModel weights and infer architecture fields from the checkpoint."""
     path = Path(checkpoint_path)
     torch_device = select_device(device)
     if not path.exists():
         if not allow_random_init:
             raise FileNotFoundError(
                 f"Checkpoint not found: {path}\n"
-                "Train one with: python scripts/train_local_gpt.py --data data/model/data.txt "
-                "--tokenizer-dir model/hftokenizer --out model/model_weights.pt"
+                "Provide the trained assignment GPT weights at model/model_weights.pt."
             )
         config = _random_init_config(d_model, n_heads, layers, vocab_size, max_seq_len)
         model = create_model(config).to(torch_device)
@@ -262,4 +265,3 @@ def _random_init_config(
         vocab_size=vocab_size or 128,
         max_seq_len=max_seq_len or 128,
     )
-

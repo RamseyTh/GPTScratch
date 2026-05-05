@@ -1,0 +1,51 @@
+{
+  "num_questions": 108,
+  "is_smoke_test": false,
+  "valid_for_research": false,
+  "invalid_reasons": [
+    "text_fact<5"
+  ],
+  "min_research_questions": 50,
+  "question_file": "data/questions/questions_research.validated.jsonl",
+  "question_source": "research_validated",
+  "limit": null,
+  "question_type_counts": {
+    "text_fact": 4,
+    "explanation": 104
+  },
+  "ticker_counts": {
+    "AAPL": 19,
+    "TSLA": 19,
+    "AMZN": 14,
+    "GOOG": 17,
+    "META": 10,
+    "MSFT": 13,
+    "NVDA": 16
+  },
+  "company_counts": {
+    "Apple": 19,
+    "Tesla": 19,
+    "Amazon": 14,
+    "Google": 17,
+    "Meta": 10,
+    "Microsoft": 13,
+    "Nvidia": 16
+  },
+  "missing_evidence_rate": 0.0,
+  "oracle_answer_coverage_at_3": 1.0,
+  "rag_answer_coverage_at_3": 0.2222222222222222,
+  "retrieval_quality": "weak",
+  "run_id": "chunk_ablation/chunk_ablation_research/fixed_512",
+  "chunks_file": "outputs/chunks/fixed_512/chunks.jsonl",
+  "checkpoint": "model/model_weights.pt",
+  "checkpoint_path": "model/model_weights.pt",
+  "tokenizer_dir": "model/hftokenizer",
+  "systems": [
+    "baseline_gpt",
+    "rag_gpt_tfidf_top3",
+    "oracle_gpt",
+    "random_context_gpt"
+  ],
+  "allow_small_research_report": false,
+  "strict_research_report": false
+}

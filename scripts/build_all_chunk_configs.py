@@ -1,3 +1,5 @@
+"""Build all chunking-ablation corpora under outputs/chunks."""
+
 from __future__ import annotations
 
 import argparse

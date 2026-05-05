@@ -98,7 +98,7 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 No ablation tables were generated for this run.
 
 ## Discussion
-Oracle context appears useful, but retrieved context is weaker; retrieval is the bottleneck.
+Oracle evidence reduces gold-answer perplexity, showing that useful context can help the local GPT when evidence is correct. Retrieved context is weaker; retrieval noise is the bottleneck.
 
 ## Training and Convergence
 Training logs were not provided. The submitted experiment compares inference-time changes. RAG does not change training time; it adds retrieval overhead at inference.
@@ -109,7 +109,7 @@ Training logs were not provided. The submitted experiment compares inference-tim
 - The submitted experiment uses provided trained weights at model/model_weights.pt. Because training logs were not provided, training time and convergence are reported as not available. The RAG variation changes inference only, so training time is unchanged relative to the baseline GPT.
 
 ## Conclusion
-RAG did not improve the primary generation metrics in this research-valid run. Token F1 delta is -0.0120 and gold-answer perplexity delta is 28779.5392.
+RAG did not improve the primary generation metrics in this run, and retrieval coverage indicates retrieval noise is a bottleneck. Token F1 delta is -0.0120 and gold-answer perplexity delta is 28779.5392.
 
 ## Failure Analysis
 See `failure_taxonomy.csv` and `failure_examples.md` for qualitative examples and failure labels.

@@ -4,27 +4,29 @@
   "valid_for_research": false,
   "invalid_reasons": [
     "num_questions<50",
-    "numeric_fact<5"
+    "text_fact<5",
+    "explanation<5"
   ],
   "min_research_questions": 50,
-  "question_file": "data/questions/questions_verified.remapped.jsonl",
-  "question_source": "verified_remapped",
+  "question_file": "data/questions/questions_research.validated.jsonl",
+  "question_source": "research_validated",
   "limit": 3,
   "question_type_counts": {
-    "numeric_fact": 3
+    "text_fact": 2,
+    "explanation": 1
   },
-  "question_quality_counts": {},
   "ticker_counts": {
-    "AAPL": 3
+    "AAPL": 2,
+    "TSLA": 1
   },
   "company_counts": {
-    "Apple": 3
+    "Apple": 2,
+    "Tesla": 1
   },
-  "missing_evidence_rate": 0.3333333333333333,
+  "missing_evidence_rate": 0.0,
   "oracle_answer_coverage_at_3": 1.0,
-  "rag_answer_coverage_at_3": 0.6666666666666666,
+  "rag_answer_coverage_at_3": 0.3333333333333333,
   "retrieval_quality": "weak",
-  "benchmark_quality": "verified_or_smoke",
   "run_id": "cleanup_smoke",
   "chunks_file": "outputs/chunks/chunks.jsonl",
   "checkpoint": "model/model_weights.pt",

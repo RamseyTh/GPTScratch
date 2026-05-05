@@ -1,3 +1,5 @@
+"""Inspect TF-IDF retrieval results for questions and chunk files."""
+
 from __future__ import annotations
 
 import argparse

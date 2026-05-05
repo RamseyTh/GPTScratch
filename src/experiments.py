@@ -1,3 +1,5 @@
+"""Run local GPT baseline, RAG, oracle, random-context, and ablation experiments."""
+
 from __future__ import annotations
 
 import time
@@ -27,6 +29,7 @@ from .utils import deterministic_sample, ensure_dir, read_jsonl, warn, write_jso
 
 
 def run_experiment(args) -> dict:
+    """Run the configured standard experiment or dispatch to chunk ablation."""
     if getattr(args, "experiment", "standard") == "chunk_ablation":
         return run_chunk_ablation(args)
 
@@ -522,7 +525,7 @@ def _infer_question_source(path: str | Path) -> str:
     if name == "questions_verified.jsonl":
         return "verified"
     if name == "questions.jsonl":
-        return "default"
+        return "fallback"
     if name == "sample_questions.jsonl":
         return "sample"
     return "custom"

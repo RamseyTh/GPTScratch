@@ -1,5 +1,5 @@
 {
-  "tokenizer_dir": "/private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/hftokenizer",
+  "tokenizer_dir": "/private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/hftokenizer",
   "tokenizer_class": "PreTrainedTokenizerFast",
   "vocab_size": 30,
   "model_max_length": 64,
@@ -7,7 +7,7 @@
   "eos_token_id": 0,
   "bos_token": "<|endoftext|>",
   "unk_token": "<|endoftext|>",
-  "checkpoint_path": "/private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/model_weights.pt",
+  "checkpoint_path": "/private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/model_weights.pt",
   "checkpoint_vocab_size": 30,
   "compatible_with_checkpoint": true
 }

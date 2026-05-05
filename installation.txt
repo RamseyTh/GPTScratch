@@ -21,19 +21,6 @@ python scripts/build_corpus.py \
 Run main experiment:
 python main.py --quick-run --run-id final_verified_run --report
 
-Run chunking ablation:
-python scripts/build_all_chunk_configs.py \
-  --data-dir data/raw \
-  --configs fixed_128,fixed_256,fixed_512,section_180,table_row_only,table_aware_mixed,table_aware_clean,table_aware_clean_context
-
-python main.py \
-  --quick-run \
-  --experiment chunk_ablation \
-  --questions data/questions/questions_research.validated.jsonl \
-  --chunk-configs fixed_128,fixed_256,fixed_512,section_180,table_row_only,table_aware_mixed,table_aware_clean,table_aware_clean_context \
-  --run-id chunk_ablation_research \
-  --report
-
 Smoke test:
 python main.py --quick-run --limit 3 --run-id smoke_test --report
 

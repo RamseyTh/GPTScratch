@@ -1,3 +1,5 @@
+"""Prompt templates for baseline, RAG, oracle, and random-context systems."""
+
 from __future__ import annotations
 
 

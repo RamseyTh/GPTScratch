@@ -1,3 +1,5 @@
+"""Inspect the saved Hugging Face tokenizer and checkpoint compatibility."""
+
 from __future__ import annotations
 
 import argparse
@@ -46,4 +48,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

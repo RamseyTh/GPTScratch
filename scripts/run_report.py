@@ -1,3 +1,5 @@
+"""Rebuild standard or chunk-ablation reports from saved outputs."""
+
 from __future__ import annotations
 
 import argparse

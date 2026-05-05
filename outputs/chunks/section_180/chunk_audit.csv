@@ -1,0 +1,21 @@
+category,value,count
+total,all,989
+chunk_config,section_180,989
+company,Amazon,4
+company,Apple,189
+company,Google,13
+company,Meta,4
+company,Microsoft,305
+company,NVIDIA,6
+company,Tesla,468
+section,Item 1,131
+section,Item 1A,269
+section,Item 7,146
+section,Item 8,443
+source_type,narrative,989
+non_retrievable_reason,header_footer,58
+non_retrievable_reason,too_short,15
+non_retrievable_reason,unknown,916
+retrievable,False,73
+retrievable,True,916
+average_token_count,all,155.23

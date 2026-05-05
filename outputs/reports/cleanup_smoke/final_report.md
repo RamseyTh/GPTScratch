@@ -16,20 +16,18 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 - chunking method: section-aware narrative chunks, table rows, table summaries, and local context chunks
 
 ## Dataset Validity
-- question file: data/questions/questions_verified.remapped.jsonl
-- question source: verified_remapped
+- question file: data/questions/questions_research.validated.jsonl
+- question source: research_validated
 - number of questions: 3
-- benchmark quality: verified_or_smoke
-- question type counts: {'numeric_fact': 3}
-- question quality counts: {}
-- ticker counts: {'AAPL': 3}
-- company counts: {'Apple': 3}
-- evidence remapping success rate: 0.6667
-- missing evidence rate: 0.3333
-- evidence quality: weak
+- question type counts: {'text_fact': 2, 'explanation': 1}
+- ticker counts: {'AAPL': 2, 'TSLA': 1}
+- company counts: {'Apple': 2, 'Tesla': 1}
+- evidence remapping success rate: 1.0000
+- missing evidence rate: 0.0000
+- evidence quality: acceptable
 - smoke_test: True
 - valid_for_research: False
-- invalid reasons: ['num_questions<50', 'numeric_fact<5']
+- invalid reasons: ['num_questions<50', 'text_fact<5', 'explanation<5']
 
 ## Tokenizer and Checkpoint
 - tokenizer dir: model/hftokenizer
@@ -53,17 +51,17 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 - min_research_questions: 50
 - is_smoke_test: True
 - valid_for_research: False
-- invalid_reasons: ['num_questions<50', 'numeric_fact<5']
+- invalid_reasons: ['num_questions<50', 'text_fact<5', 'explanation<5']
 - limit: 3
-- question_source: verified_remapped
-- question_type_counts: {'numeric_fact': 3}
-- ticker_counts: {'AAPL': 3}
-- company_counts: {'Apple': 3}
-- missing_evidence_rate: 0.3333333333333333
+- question_source: research_validated
+- question_type_counts: {'text_fact': 2, 'explanation': 1}
+- ticker_counts: {'AAPL': 2, 'TSLA': 1}
+- company_counts: {'Apple': 2, 'Tesla': 1}
+- missing_evidence_rate: 0.0
 - oracle_answer_coverage_at_3: 1.0
-- rag_answer_coverage_at_3: 0.6666666666666666
+- rag_answer_coverage_at_3: 0.3333333333333333
 - retrieval_quality: weak
-- question_file: data/questions/questions_verified.remapped.jsonl
+- question_file: data/questions/questions_research.validated.jsonl
 - chunks_file: outputs/chunks/chunks.jsonl
 - checkpoint_path: model/model_weights.pt
 - tokenizer_dir: model/hftokenizer
@@ -71,29 +69,29 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 This run is a smoke test or diagnostic run. It verifies that the pipeline executes, but it should not be used for final research conclusions.
 
 ## Retrieval Quality
-- answer_coverage@1: 0.6667
-- answer_coverage@3: 0.6667
+- answer_coverage@1: 0.0000
+- answer_coverage@3: 0.3333
 - source_accuracy@3: 1.0000
-- table_row_recall@3: 1.0000
-- noise reason counts: {'none': 2, 'wrong_section': 1}
+- table_row_recall@3: not available
+- noise reason counts: {'none': 1, 'wrong_section': 2}
 - Retrieval is the main bottleneck when answer coverage is below the research threshold. Improve chunking, metadata filtering, and evidence labels.
 - The benchmark is too small to determine whether RAG improves the baseline.
 
 ## Generation Quality
 | system | exact_match | token_f1 | numeric_accuracy | refusal_accuracy | answer_coverage_at_3 | average_gold_answer_perplexity | perplexity_delta_vs_baseline | average_total_latency |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| baseline_gpt | 0.0000 | 0.0000 | 0.0000 |  |  | 34078.3046 | 0.0000 | 0.0321 |
-| oracle_gpt | 0.0000 | 0.0000 | 0.0000 |  | 1.0000 | 23184.5516 | -10893.7530 | 0.0396 |
-| rag_gpt_tfidf_top3 | 0.0000 | 0.0000 | 0.6667 |  | 0.6667 | 32132.8883 | -1945.4163 | 0.1020 |
-| random_context_gpt | 0.0000 | 0.0000 | 0.0000 |  | 0.6667 | 14226.3653 | -19851.9393 | 0.0834 |
+| baseline_gpt | 0.0000 | 0.0000 |  |  |  | 3811.4881 | 0.0000 | 0.0309 |
+| oracle_gpt | 0.0000 | 0.0000 |  |  | 1.0000 | 3803.8846 | -7.6034 | 0.0478 |
+| rag_gpt_tfidf_top3 | 0.0000 | 0.0000 |  |  | 0.3333 | 4595.3416 | 783.8535 | 0.1658 |
+| random_context_gpt | 0.0000 | 0.0000 |  |  | 0.0000 | 4000.6628 | 189.1747 | 0.1419 |
 
 ## RAG vs Baseline Conclusion
 This is a smoke or diagnostic run, so it should not be used for final RAG-vs-baseline conclusions.
 
 ## Latency Tradeoff
-- baseline total latency: 0.0321s
-- RAG total latency: 0.1020s
-- latency delta vs baseline: 0.0699s
+- baseline total latency: 0.0309s
+- RAG total latency: 0.1658s
+- latency delta vs baseline: 0.1349s
 
 ## Ablations
 No ablation tables were generated for this run.
@@ -119,7 +117,7 @@ The benchmark is too small to determine whether RAG improves the baseline.
 
 ## Failure Analysis
 See `failure_taxonomy.csv` and `failure_examples.md` for qualitative examples and failure labels.
-Failure counts: {'numeric_unit_error': 6, 'correct': 2, 'wrong_section': 4}
+Failure counts: {'retrieval_noise': 3, 'generator_hallucination': 1, 'wrong_section': 8}
 
 ## Reproducibility Tables
 - `comparison_table.csv`

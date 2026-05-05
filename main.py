@@ -1,3 +1,5 @@
+"""Command-line entry point for the local GPT RAG experiment."""
+
 from __future__ import annotations
 
 import argparse

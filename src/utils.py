@@ -1,9 +1,12 @@
+"""Shared file, path, text, and benchmark-resolution helpers."""
+
 from __future__ import annotations
 
+import csv
 import json
 import random
 import re
-import csv
+import shutil
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -43,6 +46,14 @@ def write_jsonl(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def append_jsonl(path: str | Path, row: dict[str, Any]) -> None:
+    """Append one JSON object to a JSONL file."""
+    path = Path(path)
+    ensure_dir(path.parent)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
 def write_json(path: str | Path, data: Any) -> None:
     path = Path(path)
     ensure_dir(path.parent)
@@ -50,20 +61,30 @@ def write_json(path: str | Path, data: Any) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def write_csv(path: str | Path, rows: Iterable[dict[str, Any]]) -> None:
+def write_csv(path: str | Path, rows: Iterable[dict[str, Any]], fieldnames: list[str] | None = None) -> None:
     """Write a list of dictionaries as CSV with a stable union of columns."""
     path = Path(path)
     ensure_dir(path.parent)
     rows = list(rows)
-    fieldnames: list[str] = []
-    for row in rows:
-        for key in row:
-            if key not in fieldnames:
-                fieldnames.append(key)
+    if fieldnames is None:
+        fieldnames = []
+        for row in rows:
+            for key in row:
+                if key not in fieldnames:
+                    fieldnames.append(key)
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def read_csv(path: str | Path) -> list[dict[str, str]]:
+    """Read a CSV file into dictionaries."""
+    path = Path(path)
+    if not path.exists():
+        return []
+    with path.open("r", newline="", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
 
 def read_json(path: str | Path, default: Any | None = None) -> Any:
@@ -72,6 +93,26 @@ def read_json(path: str | Path, default: Any | None = None) -> Any:
         return default
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def count_jsonl_rows(path: str | Path) -> int:
+    """Count non-empty rows in a JSONL file without parsing every object."""
+    path = Path(path)
+    if not path.exists():
+        return 0
+    with path.open("r", encoding="utf-8") as f:
+        return sum(1 for line in f if line.strip())
+
+
+def safe_copy(src: str | Path, dst: str | Path) -> Path:
+    """Copy a file after creating the destination directory."""
+    src_path = Path(src)
+    dst_path = Path(dst)
+    if not src_path.exists():
+        raise FileNotFoundError(f"Input file not found: {src_path}")
+    ensure_dir(dst_path.parent)
+    shutil.copyfile(src_path, dst_path)
+    return dst_path
 
 
 def normalize_whitespace(text: str) -> str:
@@ -87,6 +128,11 @@ def normalize_whitespace(text: str) -> str:
             lines.append(line)
             blank = False
     return "\n".join(lines).strip()
+
+
+def normalize_text(text: str) -> str:
+    """Compatibility alias for whitespace normalization."""
+    return normalize_whitespace(text)
 
 
 def simple_word_count(text: str) -> int:
@@ -118,8 +164,9 @@ def warn(message: str) -> None:
 def resolve_question_file(explicit_path: str | Path | None = None) -> tuple[Path, str]:
     """Resolve the question file used by the main experiment.
 
-    Verified remapped questions are preferred because their evidence IDs have
-    already been checked against the current chunk file.
+    Cleaned research questions are preferred when present. Verified remapped
+    questions remain the main fallback because their evidence IDs are aligned
+    to the current chunk file.
     """
     if explicit_path:
         path = Path(explicit_path)
@@ -142,9 +189,11 @@ def resolve_question_file(explicit_path: str | Path | None = None) -> tuple[Path
 
 def _default_question_candidates() -> list[tuple[Path, str]]:
     return [
+        (Path("data/questions/questions_research.validated.jsonl"), "research_validated"),
+        (Path("data/questions/questions_research.jsonl"), "research"),
         (Path("data/questions/questions_verified.remapped.jsonl"), "verified_remapped"),
         (Path("data/questions/questions_verified.jsonl"), "verified"),
-        (Path("data/questions/questions.jsonl"), "default"),
+        (Path("data/questions/questions.jsonl"), "fallback"),
         (Path("data/questions/sample_questions.jsonl"), "sample"),
     ]
 
@@ -160,7 +209,7 @@ def question_source_for_path(path: str | Path, explicit: bool = False) -> str:
     if name == "questions_verified.jsonl":
         return "verified"
     if name == "questions.jsonl":
-        return "default"
+        return "fallback"
     if name == "sample_questions.jsonl":
         return "sample"
     return "explicit" if explicit else "custom"

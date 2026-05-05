@@ -1,3 +1,5 @@
+"""Clean structurally verified questions into a research-quality benchmark."""
+
 from __future__ import annotations
 
 import argparse

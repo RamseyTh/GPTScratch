@@ -1,3 +1,5 @@
+"""Compute QA quality, retrieval coverage, latency, and validity metrics."""
+
 from __future__ import annotations
 
 import math
@@ -149,6 +151,7 @@ def table_row_recall_for_results(results: list[dict], question: dict, k: int = 3
 
 
 def evaluate_predictions(predictions: list[dict], questions: list[dict]) -> tuple[pd.DataFrame, list[dict]]:
+    """Evaluate predictions against questions and summarize by system."""
     question_by_id = {row.get("question_id"): row for row in questions}
     details = []
     grouped: dict[str, list[dict]] = defaultdict(list)
@@ -255,6 +258,7 @@ def build_run_metadata(
     expected_systems: list[str] | None = None,
     question_source: str | None = None,
 ) -> dict:
+    """Build research-validity and reproducibility metadata for a run."""
     num_questions = len(questions)
     invalid_reasons: list[str] = []
     path_name = Path(question_path).name
@@ -320,7 +324,7 @@ def _infer_question_source(question_path: str | Path) -> str:
     if name == "questions_verified.jsonl":
         return "verified"
     if name == "questions.jsonl":
-        return "default"
+        return "fallback"
     if name == "sample_questions.jsonl":
         return "sample"
     return "custom"

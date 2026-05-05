@@ -1,3 +1,5 @@
+"""Validate evidence-grounded financial QA question files."""
+
 from __future__ import annotations
 
 import argparse

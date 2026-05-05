@@ -13,9 +13,13 @@ from typing import Any
 
 from .checkpoint import infer_checkpoint_vocab_size
 from .hftokenizer import HFTokenizer
-from .experiments import run_experiment
+from .experiments import run_experiment as execute_experiment
 from .reporting import build_chunk_ablation_report, build_report
 from .utils import ensure_dir, read_jsonl, resolve_question_file
+
+# Tests and older scripts monkeypatch `src.pipeline.run_experiment`, so keep a
+# module-level alias while the public implementation uses PipelineRunner.
+run_experiment = execute_experiment
 
 
 DEFAULT_SYSTEMS = ["baseline_gpt", "rag_gpt_tfidf_top3", "oracle_gpt", "random_context_gpt"]
@@ -78,17 +82,21 @@ class PipelineRunner:
         return cls(config, args=args)
 
     def run(self) -> dict[str, Any]:
-        """Execute the configured workflow and return output paths."""
+        """Coordinate input resolution, execution, and optional reporting."""
         self.bootstrap_outputs()
+        self.resolve_inputs()
         if self.config.report_only:
             report_path = self.write_report()
-            return {"run_dir": str(Path("outputs") / "runs" / self.config.run_id), "report_path": str(report_path)}
-        self.resolve_inputs()
+            self.result = {"run_dir": str(Path("outputs") / "runs" / self.config.run_id), "report_path": str(report_path)}
+            return self.summary()
         self.check_tokenizer_and_checkpoint()
         self.ensure_chunks()
         self.load_questions()
         self.print_startup_summary()
-        self.result = run_experiment(self.args)
+        self.run_experiment()
+        if self.config.report:
+            report_path = self.write_report()
+            self.result["report_path"] = str(report_path)
         return self.summary()
 
     def bootstrap_outputs(self) -> None:
@@ -110,7 +118,7 @@ class PipelineRunner:
         self.args.tokenizer_dir = str(self.config.tokenizer_dir)
         self.args.systems = self.config.systems
 
-    def check_tokenizer_and_checkpoint(self) -> None:
+    def check_model_and_tokenizer(self) -> None:
         """Fail early if the HF tokenizer does not match the checkpoint vocab."""
         tokenizer = HFTokenizer(self.config.tokenizer_dir)
         checkpoint_vocab = infer_checkpoint_vocab_size(self.config.checkpoint)
@@ -122,9 +130,9 @@ class PipelineRunner:
             )
         self.compatibility_pass = True
 
-    def check_model_and_tokenizer(self) -> None:
+    def check_tokenizer_and_checkpoint(self) -> None:
         """Backward-compatible name used by some tests and earlier prompts."""
-        self.check_tokenizer_and_checkpoint()
+        self.check_model_and_tokenizer()
 
     def ensure_chunks(self) -> None:
         """Let the experiment builder create standard chunks when needed."""
@@ -137,6 +145,15 @@ class PipelineRunner:
         """Count questions after any limit so startup output is honest."""
         rows = read_jsonl(self.args.questions)
         self.num_questions = min(len(rows), self.config.limit) if self.config.limit else len(rows)
+
+    def run_experiment(self) -> None:
+        """Run the configured standard experiment or chunking ablation."""
+        original_report = bool(getattr(self.args, "report", False))
+        self.args.report = False
+        try:
+            self.result = run_experiment(self.args)
+        finally:
+            self.args.report = original_report
 
     def write_report(self) -> Path:
         """Rebuild the requested report from saved run artifacts."""

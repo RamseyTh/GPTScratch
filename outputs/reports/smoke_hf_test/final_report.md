@@ -11,13 +11,13 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 - RAG-GPT TF-IDF top-3 (`rag_gpt_tfidf_top3`): The same assignment GPT receives retrieved Form 10-K chunks plus the question.
 - Oracle Evidence GPT (`oracle_gpt`): The same assignment GPT receives gold evidence, used as an upper bound.
 - Random Context GPT (`random_context_gpt`): Noise control using random chunks.
-- All systems use the same GPT architecture and the same checkpoint at /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/model_weights.pt. The only difference between baseline and RAG is the inference-time retrieval context.
+- All systems use the same GPT architecture and the same checkpoint at /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/model_weights.pt. The only difference between baseline and RAG is the inference-time retrieval context.
 - retrieval method: tfidf
 - chunking method: section-aware narrative chunks, table rows, table summaries, and local context chunks
 
 ## Dataset Validity
-- question file: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/questions.jsonl
-- question source: default
+- question file: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/questions.jsonl
+- question source: fallback
 - number of questions: 1
 - question type counts: {'numeric_fact': 1}
 - ticker counts: {'AAPL': 1}
@@ -30,10 +30,10 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 - invalid reasons: ['num_questions<50', 'question_source_not_verified', 'numeric_fact<5']
 
 ## Tokenizer and Checkpoint
-- tokenizer dir: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/hftokenizer
+- tokenizer dir: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/hftokenizer
 - tokenizer class: PreTrainedTokenizerFast
 - tokenizer vocab size: 30
-- checkpoint: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/model_weights.pt
+- checkpoint: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/model_weights.pt
 - checkpoint vocab size: 30
 - compatibility: PASS
 
@@ -53,7 +53,7 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 - valid_for_research: False
 - invalid_reasons: ['num_questions<50', 'question_source_not_verified', 'numeric_fact<5']
 - limit: 1
-- question_source: default
+- question_source: fallback
 - question_type_counts: {'numeric_fact': 1}
 - ticker_counts: {'AAPL': 1}
 - company_counts: {'Apple': 1}
@@ -61,10 +61,10 @@ Adding retrieved 10-K context should improve factual grounding and reduce gold-a
 - oracle_answer_coverage_at_3: 1.0
 - rag_answer_coverage_at_3: 1.0
 - retrieval_quality: acceptable
-- question_file: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/questions.jsonl
-- chunks_file: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/chunks.jsonl
-- checkpoint_path: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/model_weights.pt
-- tokenizer_dir: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-164/test_smoke_pipeline_runs_with_0/hftokenizer
+- question_file: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/questions.jsonl
+- chunks_file: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/chunks.jsonl
+- checkpoint_path: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/model_weights.pt
+- tokenizer_dir: /private/var/folders/vn/_bjbbh9j605bzf3s4_p2bzf00000gn/T/pytest-of-sichaoliu/pytest-166/test_smoke_pipeline_runs_with_0/hftokenizer
 
 This run is a smoke test or diagnostic run. It verifies that the pipeline executes, but it should not be used for final research conclusions.
 
@@ -79,18 +79,18 @@ This run is a smoke test or diagnostic run. It verifies that the pipeline execut
 ## Generation Quality
 | system | exact_match | token_f1 | numeric_accuracy | refusal_accuracy | answer_coverage_at_3 | average_gold_answer_perplexity | perplexity_delta_vs_baseline | average_total_latency |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| baseline_gpt | 0.0000 | 0.5000 | 0.0000 |  |  | 29.9873 | 0.0000 | 0.0025 |
-| oracle_gpt | 0.0000 | 0.5000 | 0.0000 |  | 1.0000 | 29.9780 | -0.0092 | 0.0017 |
-| rag_gpt_tfidf_top3 | 0.0000 | 0.5000 | 1.0000 |  | 1.0000 | 29.9770 | -0.0103 | 0.0022 |
-| random_context_gpt | 0.0000 | 0.5000 | 0.0000 |  | 1.0000 | 29.9777 | -0.0095 | 0.0020 |
+| baseline_gpt | 0.0000 | 0.5000 | 0.0000 |  |  | 29.9879 | 0.0000 | 0.0031 |
+| oracle_gpt | 0.0000 | 0.0000 | 0.0000 |  | 1.0000 | 30.0113 | 0.0234 | 0.0033 |
+| rag_gpt_tfidf_top3 | 0.0000 | 0.0000 | 1.0000 |  | 1.0000 | 30.0107 | 0.0228 | 0.0040 |
+| random_context_gpt | 0.0000 | 0.0000 | 0.0000 |  | 1.0000 | 30.0111 | 0.0232 | 0.0018 |
 
 ## RAG vs Baseline Conclusion
 This is a smoke or diagnostic run, so it should not be used for final RAG-vs-baseline conclusions.
 
 ## Latency Tradeoff
-- baseline total latency: 0.0025s
-- RAG total latency: 0.0022s
-- latency delta vs baseline: -0.0003s
+- baseline total latency: 0.0031s
+- RAG total latency: 0.0040s
+- latency delta vs baseline: 0.0009s
 
 ## Ablations
 No ablation tables were generated for this run.

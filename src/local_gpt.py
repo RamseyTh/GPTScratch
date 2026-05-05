@@ -1,3 +1,5 @@
+"""Wrap the assignment GPTModel for generation and perplexity scoring."""
+
 from __future__ import annotations
 
 import math
@@ -30,6 +32,8 @@ class LocalGPTConfig:
 
 
 class LocalGPT:
+    """Local-only inference interface for the course GPT checkpoint."""
+
     def __init__(self, config: LocalGPTConfig):
         self.config = config
         self.device = select_device(config.device)
@@ -71,8 +75,7 @@ class LocalGPT:
                 "Tokenizer/checkpoint mismatch. "
                 f"The checkpoint expects vocab_size={checkpoint_vocab_size}, "
                 f"but {self.config.tokenizer_dir} has vocab_size={tokenizer_vocab_size}. "
-                "Rebuild the tokenizer with scripts/train_tokenizer.py using data/model/data.txt "
-                "or provide the tokenizer used to train model/model_weights.pt."
+                "Provide the tokenizer used to train model/model_weights.pt."
             )
         print("compatibility result: PASS")
 
@@ -88,6 +91,7 @@ class LocalGPT:
         return metadata
 
     def generate(self, prompt: str, max_new_tokens: int | None = None) -> dict:
+        """Generate a short autoregressive completion from a prompt."""
         start = time.perf_counter()
         max_new = self.config.max_new_tokens if max_new_tokens is None else max_new_tokens
         prompt_ids = self.tokenizer.encode(prompt)
@@ -128,6 +132,7 @@ class LocalGPT:
         }
 
     def score_loss(self, prompt: str, target: str) -> dict:
+        """Compute next-token loss/perplexity for a gold target suffix."""
         prompt_ids = self.tokenizer.encode(prompt)
         target_ids = self.tokenizer.encode(target)
         if not target_ids:
@@ -176,4 +181,3 @@ class LocalGPT:
             return int(indices.gather(-1, sampled).item())
         probs = torch.softmax(logits, dim=-1)
         return int(torch.multinomial(probs, num_samples=1).item())
-

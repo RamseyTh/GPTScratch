@@ -1,3 +1,5 @@
+"""Inspect the local GPT checkpoint architecture and tokenizer match."""
+
 from __future__ import annotations
 
 import argparse

@@ -1,3 +1,5 @@
+"""Load and lightly normalize raw Form 10-K filings from local files."""
+
 from __future__ import annotations
 
 import re
@@ -12,6 +14,7 @@ SUPPORTED_EXTENSIONS = {".txt", ".html", ".htm", ".pdf"}
 
 
 def discover_raw_files(data_dir: str | Path) -> list[Path]:
+    """Find supported raw filing files under a data directory."""
     root = Path(data_dir)
     if not root.exists():
         return []
@@ -20,6 +23,7 @@ def discover_raw_files(data_dir: str | Path) -> list[Path]:
 
 
 def load_raw_documents(data_dir: str | Path) -> list[dict]:
+    """Read local filings into dictionaries with inferred company metadata."""
     documents = []
     for path in discover_raw_files(data_dir):
         text = read_filing_file(path)
@@ -128,4 +132,3 @@ def smoke_documents() -> list[dict]:
             "year": "2025",
         },
     ]
-

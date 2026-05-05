@@ -1,3 +1,5 @@
+"""Install verified question artifacts into data/questions."""
+
 from __future__ import annotations
 
 import argparse

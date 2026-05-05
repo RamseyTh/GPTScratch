@@ -1,3 +1,5 @@
+"""Build Markdown and CSV reports from saved experiment artifacts."""
+
 from __future__ import annotations
 
 import csv
@@ -542,7 +544,7 @@ def _discussion(metadata: dict, baseline: dict, rag: dict, oracle: dict, random_
     oracle_ok = oracle and _num(oracle.get("answer_coverage_at_3")) >= 0.95 and _num(oracle.get("average_gold_answer_perplexity")) <= _num(baseline.get("average_gold_answer_perplexity"))
     rag_ok = rag and _num(rag.get("answer_coverage_at_3")) >= 0.70
     if oracle_ok and not rag_ok:
-        return "Oracle context appears useful, but retrieved context is weaker; retrieval is the bottleneck."
+        return "Oracle evidence reduces gold-answer perplexity, showing that useful context can help the local GPT when evidence is correct. Retrieved context is weaker; retrieval noise is the bottleneck."
     if not oracle_ok:
         return "Oracle context did not clearly improve generation; generation, prompt format, tokenizer, or model capacity may be the bottleneck."
     return "The run passes validity gates; interpret RAG quality using the retrieval, generation, and latency tables."
@@ -572,6 +574,8 @@ def _conclusion(metadata: dict, baseline: dict, rag: dict) -> str:
         verdict = "RAG improved at least one primary generation metric in this research-valid run."
     else:
         verdict = "RAG did not improve the primary generation metrics in this research-valid run."
+    if metadata.get("retrieval_quality") == "weak":
+        verdict = "RAG did not improve the primary generation metrics in this run, and retrieval coverage indicates retrieval noise is a bottleneck."
     return f"{verdict} Token F1 delta is {f1_delta:.4f} and gold-answer perplexity delta is {ppl_delta:.4f}."
 
 

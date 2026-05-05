@@ -1,3 +1,5 @@
+"""Build a retrieval chunk corpus from local Form 10-K files."""
+
 from __future__ import annotations
 
 import argparse

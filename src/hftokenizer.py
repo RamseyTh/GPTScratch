@@ -1,3 +1,5 @@
+"""Hugging Face tokenizer wrapper used by the local GPT checkpoint."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,13 +20,14 @@ class HFTokenizerConfig:
 
 
 class HFTokenizer:
+    """Thin project wrapper around the saved `model/hftokenizer` folder."""
+
     def __init__(self, tokenizer_dir: str | Path = "model/hftokenizer"):
         self.tokenizer_dir = resolve_project_path(tokenizer_dir)
         if not self.tokenizer_dir.exists():
             raise FileNotFoundError(
                 f"Tokenizer directory not found: {self.tokenizer_dir}\n"
-                "Build it with: python scripts/train_tokenizer.py --data data/model/data.txt "
-                "--out-dir model/hftokenizer --vocab-size 10000"
+                "Provide the Hugging Face tokenizer folder at model/hftokenizer."
             )
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_dir)
@@ -42,6 +45,7 @@ class HFTokenizer:
         vocab_size: int = 10000,
         model_max_length: int = 1024,
     ) -> "HFTokenizer":
+        """Train a GPT-2 style tokenizer from local text and save it."""
         data_path = resolve_project_path(data_path)
         output_dir = resolve_project_path(output_dir)
         if not data_path.exists():
@@ -67,9 +71,11 @@ class HFTokenizer:
         return cls(output_dir)
 
     def encode(self, text: str) -> list[int]:
+        """Encode text to model token IDs without adding special tokens."""
         return list(self.tokenizer(text, add_special_tokens=False, truncation=False, verbose=False)["input_ids"])
 
     def decode(self, ids: list[int], skip_special_tokens: bool = True) -> str:
+        """Decode model token IDs back to text."""
         return self.tokenizer.decode(ids, skip_special_tokens=skip_special_tokens)
 
     @property

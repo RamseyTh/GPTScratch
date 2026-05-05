@@ -1,3 +1,5 @@
+"""Transparent TF-IDF retrieval over retrievable Form 10-K chunks."""
+
 from __future__ import annotations
 
 import os
@@ -18,6 +20,8 @@ from .evaluation import answer_coverage_for_results, source_accuracy_for_results
 
 
 class Retriever:
+    """Retrieve top-ranked chunks with optional ticker/year metadata filters."""
+
     def __init__(self, chunks: list[dict], method: str = "tfidf"):
         self.all_chunks = chunks
         self.chunks = [chunk for chunk in chunks if chunk.get("retrievable", True) is not False]
@@ -142,6 +146,7 @@ class Retriever:
 
 
 def build_retrieval_query(question: dict) -> str:
+    """Rewrite a question into a TF-IDF query using metadata and type hints."""
     parts = [str(question.get("question", ""))]
     for key in ("ticker", "company", "year"):
         if question.get(key):
@@ -184,6 +189,7 @@ def retrieval_filters(question: dict, open_corpus: bool = False) -> dict:
 
 
 def retrieval_context(results: list[dict], max_chars: int | None = None, token_budget: int = 700) -> str:
+    """Pack retrieved chunks into a bounded prompt context."""
     pieces = []
     used_tokens = 0
     for result in results:
